@@ -13,6 +13,7 @@ import { SpriteSheet } from './pet/SpriteSheet.js';
 import { PetRenderer } from './pet/PetRenderer.js';
 import { StateMachine } from './pet/StateMachine.js';
 import { Behaviors } from './pet/Behaviors.js';
+import { MoodSystem } from './pet/MoodSystem.js';
 import { DragHandler } from './interaction/DragHandler.js';
 import { ClickHandler } from './interaction/ClickHandler.js';
 import { ContextMenu } from './interaction/ContextMenu.js';
@@ -28,6 +29,7 @@ class OpenClawPet {
 
     this.spriteSheet = new SpriteSheet();
     this.stateMachine = new StateMachine();
+    this.moodSystem = new MoodSystem();
     this.renderer = null;
     this.behaviors = null;
     this.bubble = null;
@@ -40,6 +42,8 @@ class OpenClawPet {
 
     this._lastTime = 0;
     this._running = false;
+    this._proactiveTimer = null;
+    this._pendingClipboard = null; // 待处理的剪贴板内容
   }
 
   async init() {
@@ -91,15 +95,24 @@ class OpenClawPet {
     this.clickHandler = new ClickHandler(
       this.canvas, this.stateMachine, this.behaviors, {
         onSingleClick: () => {
-          const greets = ['喵~ ❤️', '嗯？', '摸摸~', '(=^・ω・^=)', '在呢~'];
+          this.moodSystem.gain(3);
+          const level = this.moodSystem.getLevel();
+          const greets = level === 'sad'
+            ? ['...喵', '(T_T)', '嗯...', '理我一下嘛']
+            : ['喵~ ❤️', '嗯？', '摸摸~', '(=^・ω・^=)', '在呢~'];
           this.bubble.show(greets[Math.floor(Math.random() * greets.length)], 2000);
         },
         onDoubleClick: () => {
-          // 双击打开/关闭聊天面板
-          if (this.settingsPanel.isOpen) {
-            this.settingsPanel.close();
-          }
+          if (this.settingsPanel.isOpen) this.settingsPanel.close();
           this.chatPanel.toggle();
+        },
+        onLongPress: () => {
+          // 摸头！
+          this.moodSystem.gain(15);
+          this.behaviors.recordInteraction();
+          const purrs = ['咕噜噜~ 😻', '好舒服喵~', '再摸摸！(=^ω^=)', '呼噜呼噜...', '主人真好~ ❤️', '喵呜~'];
+          this.bubble.show(purrs[Math.floor(Math.random() * purrs.length)], 3000);
+          this.stateMachine.transition('happy', { force: true, duration: 2000 });
         }
       }
     );
@@ -113,32 +126,80 @@ class OpenClawPet {
     // 7. 鼠标穿透
     this._setupMousePassthrough();
 
-    // 8. 监听主进程事件
+    // 8. 心情值变化响应
+    this.moodSystem.onChange((level, mood) => {
+      if (level === 'sad') {
+        this.bubble.show('主人...你不陪我吗 🥺', 4000);
+        this.stateMachine.transition('sad', { force: true, duration: 2000 });
+      } else if (level === 'joyful') {
+        this.bubble.show('今天好开心！❤️', 2500);
+        this.stateMachine.transition('happy', { force: true, duration: 1500 });
+      }
+    });
+
+    // 9. 监听主进程事件
     this._setupMainProcessEvents();
 
-    // 9. 启动
+    // 10. 启动
     this.renderer.start();
     this.behaviors.start();
     this._startMainLoop();
+    this._startProactiveTimer();
 
-    // 开场
+    // 开场问候（根据时间 + 上次登录）
     setTimeout(async () => {
-      if (this.electronAPI) {
-        try {
-          const config = await this.electronAPI.getConfig();
-          if (config.gatewayReady) {
-            this.bubble.show('你好呀主人~ 双击我聊天喵！🐱', 3000);
-            this.stateMachine.transition('happy', { force: true, duration: 1200 });
-          } else {
-            this.bubble.show('OpenClaw Gateway 连接中... 稍等喵~', 4000);
-          }
-        } catch {
-          this.bubble.show('你好呀~ 我是 OpenClaw! 🐱', 3000);
-        }
-      }
+      const greeting = this._buildGreeting();
+      this.bubble.show(greeting, 4000);
+      this.stateMachine.transition('happy', { force: true, duration: 1200 });
     }, 800);
 
     console.log('✅ OpenClaw Pet ready!');
+  }
+
+  /**
+   * 根据时间和上次登录时间生成开场问候语
+   */
+  _buildGreeting() {
+    const now = Date.now();
+    const lastLaunch = parseInt(localStorage.getItem('pet-last-launch') || '0');
+    const hoursSince = (now - lastLaunch) / 3600000;
+    localStorage.setItem('pet-last-launch', String(now));
+
+    if (lastLaunch > 0 && hoursSince > 12) {
+      return `好久不见喵！等你 ${Math.round(hoursSince)} 小时了 🥺`;
+    }
+
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 9)  return '早上好主人！今天也加油哦~ ☀️';
+    if (hour >= 9 && hour < 12) return '上午好~ 有什么需要帮忙的吗？😊';
+    if (hour >= 12 && hour < 14) return '午饭吃了吗主人~ 记得休息！🍱';
+    if (hour >= 14 && hour < 18) return '下午好~ 专注工作中？我陪着你喵~';
+    if (hour >= 18 && hour < 21) return '晚上好！辛苦了一天~ 🌙';
+    if (hour >= 21 && hour < 24) return '好晚了喵... 别忘了休息哦 💤';
+    return '深夜了... 主人要注意身体喵 🌛';
+  }
+
+  /**
+   * 每 5 分钟检查：长时间无互动时主动打招呼
+   */
+  _startProactiveTimer() {
+    this._proactiveTimer = setInterval(() => {
+      if (!this._running) return;
+      const idleMs = Date.now() - (this.behaviors.lastInteractionTime || Date.now());
+      if (idleMs < 10 * 60 * 1000) return;        // 不足 10 分钟不触发
+      if (this.bubble.isVisible()) return;          // 气泡正显示时不打扰
+      if (this.chatPanel.isOpen) return;            // 聊天中不触发
+
+      const msgs = [
+        '主人~ 还在吗？(=TωT=)',
+        '喂喂！不理我吗 🥺',
+        '好无聊喵... 陪我玩玩嘛~',
+        '你已经很久没搭理我了喵！',
+        '(屁股蹭蹭) 注意到我了吗~',
+      ];
+      this.bubble.show(msgs[Math.floor(Math.random() * msgs.length)], 5000);
+      this.stateMachine.transition('sad', { force: true, duration: 2000 });
+    }, 5 * 60 * 1000);
   }
 
   _setupMousePassthrough() {
@@ -203,6 +264,31 @@ class OpenClawPet {
     this.electronAPI.onChatCleared(() => {
       this.bubble.show('对话已清空~ 重新开始吧！', 2000);
     });
+
+    // 喂零食
+    this.electronAPI.onFeedPet?.(() => {
+      this.moodSystem.gain(20);
+      this.behaviors.recordInteraction();
+      const foods = ['好吃！~ 😋', '喵呜~ 谢谢主人！', '啊好香！还有吗！', '(=^・ω・^=) 满足了~', '最喜欢主人了！❤️'];
+      this.bubble.show(foods[Math.floor(Math.random() * foods.length)], 3000);
+      this.stateMachine.transition('happy', { force: true, duration: 1500 });
+    });
+
+    // 剪贴板感知
+    this.electronAPI.onClipboardChange?.((data) => {
+      if (this.chatPanel.isOpen || this.bubble.isVisible()) return;
+      const hints = {
+        code:     '检测到代码~ 需要帮忙看看吗？🐾',
+        error:    '好像是报错！我来帮你分析！😼',
+        url:      '发现了一个链接 👀 要我帮你看看吗？',
+        longtext: '复制了一大段文字，需要我帮你处理吗？',
+      };
+      const hint = hints[data.type];
+      if (!hint) return;
+      this._pendingClipboard = data.text;
+      this.bubble.show(hint, 6000);
+      this.stateMachine.transition('idle2', { force: true, duration: 2000 }); // 侧耳倾听
+    });
   }
 
   _startMainLoop() {
@@ -217,6 +303,7 @@ class OpenClawPet {
 
       this.stateMachine.update(deltaMs);
       this.behaviors.update(deltaMs);
+      this.moodSystem.update(deltaMs);
 
       requestAnimationFrame(loop);
     };
@@ -236,6 +323,7 @@ class OpenClawPet {
 
   destroy() {
     this._running = false;
+    if (this._proactiveTimer) clearInterval(this._proactiveTimer);
     this.renderer?.destroy();
     this.behaviors?.destroy();
     this.stateMachine?.destroy();

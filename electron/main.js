@@ -8,13 +8,25 @@
  * - 用户只需启动一个 exe，一切自动搞定
  */
 
-const { app, BrowserWindow, ipcMain, Menu, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, screen, clipboard } = require('electron');
 const path = require('path');
 const { LLMService, AI_PROVIDERS } = require('./llm-service');
 
 let mainWindow = null;
 let llmService = null;
 let isExpanded = false;
+let clipboardInterval = null;
+let lastClipboardText = '';
+
+// ===== 剪贴板内容类型检测 =====
+function detectClipboardType(text) {
+  const t = text.trim();
+  if (/^https?:\/\//i.test(t)) return 'url';
+  if (/error|exception|traceback|at line \d|syntax error|undefined is not/i.test(t)) return 'error';
+  if (/[\{\}]|import |function |class |=>|const |let |var |def |public |private |async |await |#include|SELECT |FROM /.test(t)) return 'code';
+  if (t.length > 200) return 'longtext';
+  return 'text';
+}
 
 // ===== 窗口尺寸 =====
 const PET_SIZE = { width: 200, height: 250 };
@@ -169,6 +181,10 @@ function createWindow() {
       },
       { type: 'separator' },
       {
+        label: '🍤 喂零食',
+        click: () => mainWindow.webContents.send('feed-pet')
+      },
+      {
         label: '📏 大小',
         submenu: [
           { label: '小 (80px)', click: () => mainWindow.webContents.send('resize-pet', 80) },
@@ -241,10 +257,27 @@ app.whenReady().then(async () => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+
+  // ===== 剪贴板监控 =====
+  clipboardInterval = setInterval(() => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    try {
+      const text = clipboard.readText();
+      if (text && text !== lastClipboardText && text.trim().length >= 10) {
+        lastClipboardText = text;
+        const type = detectClipboardType(text);
+        mainWindow.webContents.send('clipboard-changed', {
+          text: text.substring(0, 600),
+          type,
+        });
+      }
+    } catch {}
+  }, 2000);
 });
 
 app.on('before-quit', () => {
   if (llmService) llmService.destroy();
+  if (clipboardInterval) clearInterval(clipboardInterval);
 });
 
 app.on('window-all-closed', () => {

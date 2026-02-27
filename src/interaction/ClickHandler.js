@@ -20,12 +20,23 @@ export class ClickHandler {
 
     this.onSingleClick = options.onSingleClick || null;
     this.onDoubleClick = options.onDoubleClick || null;
+    this.onLongPress = options.onLongPress || null;
+
+    // 长按检测
+    this.longPressTimer = null;
+    this.longPressDelay = 1500;
+    this._isLongPressing = false;
 
     this._onClick = this._onClick.bind(this);
     this._onDblClick = this._onDblClick.bind(this);
+    this._onMouseDown = this._onMouseDown.bind(this);
+    this._onMouseUp = this._onMouseUp.bind(this);
 
     this.element.addEventListener('click', this._onClick);
     this.element.addEventListener('dblclick', this._onDblClick);
+    this.element.addEventListener('mousedown', this._onMouseDown);
+    this.element.addEventListener('mouseup', this._onMouseUp);
+    this.element.addEventListener('mouseleave', this._onMouseUp);
   }
 
   _onClick(e) {
@@ -50,7 +61,32 @@ export class ClickHandler {
     this._handleDoubleClick(e);
   }
 
+  _onMouseDown(e) {
+    if (e.button !== 0) return;
+    this._isLongPressing = false;
+    this.longPressTimer = setTimeout(() => {
+      this._isLongPressing = true;
+      this.longPressTimer = null;
+      if (this.clickTimeout) {
+        clearTimeout(this.clickTimeout);
+        this.clickTimeout = null;
+      }
+      if (this.onLongPress) this.onLongPress(e);
+    }, this.longPressDelay);
+  }
+
+  _onMouseUp(e) {
+    if (this.longPressTimer) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+  }
+
   _handleSingleClick(e) {
+    if (this._isLongPressing) {
+      this._isLongPressing = false;
+      return; // 长按已处理，忽略 click 事件
+    }
     this.behaviors.recordInteraction();
 
     // 播放点击反应动画（500ms）
@@ -74,7 +110,11 @@ export class ClickHandler {
 
   destroy() {
     if (this.clickTimeout) clearTimeout(this.clickTimeout);
+    if (this.longPressTimer) clearTimeout(this.longPressTimer);
     this.element.removeEventListener('click', this._onClick);
     this.element.removeEventListener('dblclick', this._onDblClick);
+    this.element.removeEventListener('mousedown', this._onMouseDown);
+    this.element.removeEventListener('mouseup', this._onMouseUp);
+    this.element.removeEventListener('mouseleave', this._onMouseUp);
   }
 }
