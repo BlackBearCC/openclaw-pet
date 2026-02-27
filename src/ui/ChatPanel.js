@@ -1,0 +1,266 @@
+/**
+ * ChatPanel.js
+ * 迷你聊天面板 — 双击宠物弹出，直接和 AI 对话
+ *
+ * 支持流式回复显示（通过 WebSocket RPC chat 事件）
+ */
+
+export class ChatPanel {
+  /**
+   * @param {object} electronAPI - preload 暴露的 API
+   * @param {import('../pet/StateMachine').StateMachine} stateMachine
+   * @param {import('./Bubble').Bubble} bubble
+   */
+  constructor(electronAPI, stateMachine, bubble) {
+    this.electronAPI = electronAPI;
+    this.sm = stateMachine;
+    this.bubble = bubble;
+    this.isOpen = false;
+    this.element = null;
+    this.messagesEl = null;
+    this.inputEl = null;
+    this.isSending = false;
+
+    // 流式状态
+    this.activeRunId = null;
+    this.activeTypingId = null;
+    this.streamedText = '';
+
+    this._createDOM();
+    this._setupStreamListener();
+  }
+
+  _createDOM() {
+    this.element = document.createElement('div');
+    this.element.id = 'chat-panel';
+    this.element.innerHTML = `
+      <div class="chat-header">
+        <span class="chat-title">OpenClaw Chat</span>
+        <div class="chat-header-actions">
+          <button class="chat-abort" title="中止回复" style="display:none">■</button>
+          <button class="chat-close" title="关闭">✕</button>
+        </div>
+      </div>
+      <div class="chat-messages"></div>
+      <div class="chat-input-area">
+        <input type="text" class="chat-input" placeholder="跟我说点什么喵~" />
+        <button class="chat-send" title="发送">➤</button>
+      </div>
+    `;
+
+    this.messagesEl = this.element.querySelector('.chat-messages');
+    this.inputEl = this.element.querySelector('.chat-input');
+    this.sendBtn = this.element.querySelector('.chat-send');
+    this.abortBtn = this.element.querySelector('.chat-abort');
+    const closeBtn = this.element.querySelector('.chat-close');
+
+    this.sendBtn.addEventListener('click', () => this._send());
+    this.inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        this._send();
+      }
+    });
+
+    this.abortBtn.addEventListener('click', () => this._abort());
+    closeBtn.addEventListener('click', () => this.close());
+
+    document.body.appendChild(this.element);
+  }
+
+  /**
+   * 监听来自主进程的流式聊天事件
+   */
+  _setupStreamListener() {
+    if (!this.electronAPI?.onChatStream) return;
+
+    this.electronAPI.onChatStream((payload) => {
+      if (!payload) return;
+
+      // 只处理当前活跃 run 的事件
+      if (this.activeRunId && payload.runId !== this.activeRunId) return;
+
+      if (payload.state === 'delta') {
+        const text = this._extractText(payload.message);
+        if (text) {
+          this.streamedText = text;
+          this._replaceMessage(this.activeTypingId, text);
+          this.sm.transition('talk', { force: true, duration: 500 });
+        }
+      }
+
+      if (payload.state === 'final') {
+        const finalText = this._extractText(payload.message) || this.streamedText || '喵？';
+        this._replaceMessage(this.activeTypingId, finalText);
+        this._finishSending(finalText);
+      }
+
+      if (payload.state === 'error') {
+        const errMsg = payload.errorMessage || '出错了喵~';
+        this._replaceMessage(this.activeTypingId, errMsg);
+        this._finishSending(errMsg, 'negative');
+      }
+
+      if (payload.state === 'aborted') {
+        this._replaceMessage(this.activeTypingId, '（已中止）');
+        this._finishSending('（已中止）', 'neutral');
+      }
+    });
+  }
+
+  async _send() {
+    const text = this.inputEl.value.trim();
+    if (!text || this.isSending) return;
+
+    this.inputEl.value = '';
+    this._addMessage('user', text);
+
+    this.isSending = true;
+    this.sendBtn.style.display = 'none';
+    this.abortBtn.style.display = 'flex';
+    this.sm.transition('talk', { force: true, duration: 2000 });
+
+    // 显示打字指示
+    this.activeTypingId = this._addMessage('assistant', '...');
+    this.streamedText = '';
+
+    // 尝试使用流式聊天，fallback 到旧接口
+    if (this.electronAPI.chatSend) {
+      try {
+        const result = await this.electronAPI.chatSend(text);
+        this.activeRunId = result.runId;
+        // 流式事件将通过 _setupStreamListener 处理
+      } catch (e) {
+        // 流式发送失败，fallback 到旧接口
+        console.warn('Stream send failed, falling back:', e.message);
+        await this._sendLegacy(text);
+      }
+    } else {
+      await this._sendLegacy(text);
+    }
+  }
+
+  /**
+   * 旧接口 fallback
+   */
+  async _sendLegacy(text) {
+    try {
+      const response = await this.electronAPI.chatWithAI(text);
+      this._replaceMessage(this.activeTypingId, response.text);
+      this._finishSending(response.text, response.sentiment);
+    } catch (e) {
+      this._replaceMessage(this.activeTypingId, `出错了喵: ${e.message}`);
+      this._finishSending(null, 'negative');
+    }
+  }
+
+  _finishSending(text, sentiment) {
+    this.isSending = false;
+    this.activeRunId = null;
+    this.sendBtn.style.display = 'flex';
+    this.abortBtn.style.display = 'none';
+
+    if (sentiment === 'positive') {
+      this.sm.transition('happy', { force: true, duration: 1500 });
+    } else if (sentiment === 'negative') {
+      this.sm.transition('sad', { force: true, duration: 1500 });
+    } else if (text) {
+      // 自动检测情感
+      const s = this._detectSentiment(text);
+      if (s === 'positive') this.sm.transition('happy', { force: true, duration: 1500 });
+      else if (s === 'negative') this.sm.transition('sad', { force: true, duration: 1500 });
+      else this.sm.transition('idle', { force: true });
+    } else {
+      this.sm.transition('idle', { force: true });
+    }
+
+    // 气泡简短显示
+    if (text && text.length > 0) {
+      const shortText = text.length > 30 ? text.substring(0, 30) + '...' : text;
+      this.bubble.show(shortText, 3000);
+    }
+  }
+
+  async _abort() {
+    if (!this.electronAPI.chatAbort) return;
+    try {
+      await this.electronAPI.chatAbort();
+    } catch (e) {
+      console.warn('Abort failed:', e.message);
+    }
+  }
+
+  _addMessage(role, text) {
+    const id = 'msg-' + Date.now() + Math.random().toString(36).slice(2, 6);
+    const div = document.createElement('div');
+    div.className = `chat-msg chat-msg-${role}`;
+    div.id = id;
+    div.textContent = text;
+    this.messagesEl.appendChild(div);
+    this.messagesEl.scrollTop = this.messagesEl.scrollHeight;
+    return id;
+  }
+
+  _replaceMessage(id, newText) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = newText;
+    this.messagesEl.scrollTop = this.messagesEl.scrollHeight;
+  }
+
+  /**
+   * 从 chat 事件 message 中提取文本
+   */
+  _extractText(message) {
+    if (!message) return '';
+    let content = message;
+    if (typeof message === 'object' && message.content !== undefined) content = message.content;
+    if (typeof content === 'string') return content.trim();
+    if (Array.isArray(content)) {
+      return content
+        .filter(b => b && typeof b === 'object' && b.type === 'text' && typeof b.text === 'string')
+        .map(b => b.text)
+        .join('\n')
+        .trim();
+    }
+    return '';
+  }
+
+  _detectSentiment(text) {
+    if (/[❤️😊🎉✨😄开心高兴棒好赞喜欢]/.test(text)) return 'positive';
+    if (/[😢😭💔难过伤心抱歉对不起错误失败呜]/.test(text)) return 'negative';
+    return 'neutral';
+  }
+
+  open() {
+    if (this.isOpen) return;
+    this.isOpen = true;
+    this.element.classList.add('open');
+
+    if (this.electronAPI?.expandWindow) {
+      this.electronAPI.expandWindow(true);
+    }
+
+    setTimeout(() => this.inputEl.focus(), 100);
+  }
+
+  close() {
+    if (!this.isOpen) return;
+    this.isOpen = false;
+    this.element.classList.remove('open');
+
+    if (this.electronAPI?.expandWindow) {
+      this.electronAPI.expandWindow(false);
+    }
+  }
+
+  toggle() {
+    if (this.isOpen) this.close();
+    else this.open();
+  }
+
+  destroy() {
+    if (this.element?.parentNode) {
+      this.element.parentNode.removeChild(this.element);
+    }
+  }
+}

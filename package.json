@@ -1,0 +1,60 @@
+{
+  "name": "openclaw-pet",
+  "version": "0.2.0",
+  "description": "OpenClaw Desktop Pet Assistant - 内嵌 OpenClaw AI 的桌面宠物助手",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "generate-placeholder": "node scripts/generate-placeholder.js",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest"
+  },
+  "keywords": ["openclaw", "desktop-pet", "electron", "ai-assistant"],
+  "license": "MIT",
+  "dependencies": {
+    "openclaw": "latest"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.0.0",
+    "jest": "^29.7.0"
+  },
+  "build": {
+    "appId": "com.openclaw.pet",
+    "productName": "OpenClaw Pet",
+    "files": [
+      "electron/**/*",
+      "src/**/*",
+      "assets/**/*",
+      "node_modules/**/*",
+      "!node_modules/openclaw/docs/**",
+      "!node_modules/openclaw/**/*.test.js",
+      "!node_modules/openclaw/apps/**"
+    ],
+    "extraFiles": [
+      {
+        "from": "node_modules/openclaw",
+        "to": "resources/openclaw",
+        "filter": ["**/*", "!docs/**", "!*.test.js", "!apps/**"]
+      },
+      {
+        "from": "node_modules/.bin",
+        "to": "resources/bin",
+        "filter": ["openclaw*"]
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
