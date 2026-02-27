@@ -13,13 +13,16 @@ export class PetRenderer {
   /**
    * @param {HTMLCanvasElement} canvas
    * @param {import('./SpriteSheet').SpriteSheet} spriteSheet
+   * @param {import('./SpriteSheet').SpriteSheet} spriteSheetKitten - 幼猫 spritesheet（stage 0 使用）
    * @param {number} renderSize - 渲染尺寸（正方形）
    */
-  constructor(canvas, spriteSheet, renderSize = 128) {
+  constructor(canvas, spriteSheet, spriteSheetKitten, renderSize = 128) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.spriteSheet = spriteSheet;
+    this.spriteSheetKitten = spriteSheetKitten;
     this.renderSize = renderSize;
+    this._growthStage = 0;
 
     // 设置 canvas 尺寸
     this.canvas.width = renderSize;
@@ -49,24 +52,45 @@ export class PetRenderer {
   }
 
   /**
+   * 设置成长阶段（影响使用的 spritesheet 和滤镜）
+   * @param {number} stage 0-3
+   */
+  setGrowthStage(stage) {
+    this._growthStage = stage;
+  }
+
+  /**
    * 设置当前动画
    * @param {string} animationName
    * @param {boolean} resetFrame - 是否重置到第0帧
    */
   setAnimation(animationName, resetFrame = true) {
-    if (this.currentAnimation === animationName && !resetFrame) return;
+    // 状态→动画名映射（某些状态复用已有动画）
+    const animMap = { edge_idle: 'sit' };
+    const resolved = animMap[animationName] || animationName;
 
-    const anim = this.spriteSheet.getAnimation(animationName);
+    if (this.currentAnimation === resolved && !resetFrame) return;
+
+    const sheet = this._getActiveSheet();
+    const anim = sheet.getAnimation(resolved);
     if (!anim) {
       console.warn(`Animation "${animationName}" not found, keeping current`);
       return;
     }
 
-    this.currentAnimation = animationName;
+    this.currentAnimation = resolved;
     if (resetFrame) {
       this.currentFrame = 0;
       this.frameAccumulator = 0;
     }
+  }
+
+  /** 根据成长阶段选择当前使用的 spritesheet */
+  _getActiveSheet() {
+    if (this._growthStage === 0 && this.spriteSheetKitten?.loaded) {
+      return this.spriteSheetKitten;
+    }
+    return this.spriteSheet;
   }
 
   /**
@@ -116,9 +140,10 @@ export class PetRenderer {
    */
   _updateFrame(deltaMs) {
     this._totalTime += deltaMs;
-    const fps = this.spriteSheet.getFPS(this.currentAnimation);
+    const sheet = this._getActiveSheet();
+    const fps = sheet.getFPS(this.currentAnimation);
     const frameDuration = 1000 / fps;
-    const anim = this.spriteSheet.getAnimation(this.currentAnimation);
+    const anim = sheet.getAnimation(this.currentAnimation);
     if (!anim) return;
 
     this.frameAccumulator += deltaMs;
@@ -152,17 +177,37 @@ export class PetRenderer {
     this.ctx.clearRect(0, 0, w, h);
     this.ctx.imageSmoothingEnabled = false;
 
+    // 根据成长阶段选择 spritesheet 和 CSS filter
+    const sheet = this._getActiveSheet();
+    const stageFilters = [
+      null,                               // 0: 幼猫 sprite 自带特征
+      'brightness(1.12) saturate(0.8)',  // 1: 少年猫，偏亮淡
+      null,                               // 2: 成年默认
+      'saturate(1.25) brightness(0.92)', // 3: 更饱和
+    ];
+    const stageFilter = stageFilters[this._growthStage] || null;
+
+    if (stageFilter) {
+      this.ctx.filter = stageFilter;
+    }
+
     // 呼吸效果：以底部为锚点，垂直轻微缩放
     const breathPhase = (this._totalTime % this._breathPeriod) / this._breathPeriod;
     const breathScale = 1 + this._breathAmount * Math.sin(breathPhase * Math.PI * 2);
 
     this.ctx.save();
     this.ctx.translate(w / 2, h);          // 锚点移到底部中心
+
+    // 幼猫缩小 0.85x，以底部为锚点
+    if (this._growthStage === 0) {
+      this.ctx.scale(0.85, 0.85);
+    }
+
     this.ctx.scale(1, breathScale);         // 仅垂直方向缩放
     this.ctx.translate(-w / 2, -h);        // 还原
 
     // 绘制当前帧
-    this.spriteSheet.drawFrame(
+    sheet.drawFrame(
       this.ctx,
       this.currentAnimation,
       this.currentFrame,
@@ -172,6 +217,7 @@ export class PetRenderer {
     );
 
     this.ctx.restore();
+    this.ctx.filter = 'none'; // 重置滤镜
 
     // overlay 绘制（叠加在猫咪之上）
     if (this.overlayDrawFn) {

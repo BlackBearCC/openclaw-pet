@@ -69,24 +69,45 @@ export class DragHandler {
     this.dragStartY = e.screenY;
   }
 
-  _onMouseUp(e) {
+  async _onMouseUp(e) {
     const wasDragging = this.isDragging;
     this._isMouseDown = false;
     this.isDragging = false;
 
-    if (wasDragging) {
-      this.sm.transition('idle', { force: true });
-    }
-
-    // 更新 behaviors 中的位置信息
-    if (this.electronAPI && this.electronAPI.getWindowPosition) {
-      this.electronAPI.getWindowPosition().then(pos => {
-        this.behaviors.setPosition(pos.x, pos.y);
-      });
-    }
-
     document.removeEventListener('mousemove', this._onMouseMove);
     document.removeEventListener('mouseup', this._onMouseUp);
+
+    if (!wasDragging) return;
+
+    // 边缘吸附检测
+    if (this.electronAPI?.getWindowPosition && this.electronAPI?.getScreenSize) {
+      try {
+        const pos = await this.electronAPI.getWindowPosition();
+        const screen = await this.electronAPI.getScreenSize();
+        const SNAP = 30;
+        let snapped = null;
+        let snapX = pos.x;
+        let snapY = pos.y;
+
+        if (pos.x <= SNAP) { snapX = 0; snapped = 'left'; }
+        else if (pos.x + 200 >= screen.width - SNAP) { snapX = screen.width - 200; snapped = 'right'; }
+
+        if (pos.y <= SNAP) { snapY = 0; snapped = snapped || 'top'; }
+        else if (pos.y + 250 >= screen.height - SNAP) { snapY = screen.height - 250; snapped = snapped || 'bottom'; }
+
+        if (snapped) {
+          this.electronAPI.moveWindow(snapX - pos.x, snapY - pos.y);
+        }
+
+        this.behaviors.setPosition(snapX, snapY);
+        this.behaviors.setEdgeSnapped(snapped);
+        this.sm.transition(snapped ? 'edge_idle' : 'idle', { force: true });
+      } catch {
+        this.sm.transition('idle', { force: true });
+      }
+    } else {
+      this.sm.transition('idle', { force: true });
+    }
   }
 
   destroy() {

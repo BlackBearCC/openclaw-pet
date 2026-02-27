@@ -11,9 +11,11 @@
 const { app, BrowserWindow, ipcMain, Menu, screen, clipboard } = require('electron');
 const path = require('path');
 const { LLMService, AI_PROVIDERS } = require('./llm-service');
+const { Win32Monitor } = require('./win32-monitor');
 
 let mainWindow = null;
 let llmService = null;
+let win32Monitor = null;
 let isExpanded = false;
 let clipboardInterval = null;
 let lastClipboardText = '';
@@ -82,6 +84,34 @@ function createWindow() {
   ipcMain.handle('get-screen-size', () => {
     const { width, height } = screen.getPrimaryDisplay().workAreaSize;
     return { width, height };
+  });
+
+  // ===== IPC: 绝对窗口定位 =====
+  ipcMain.on('set-window-position', (e, x, y) => {
+    if (mainWindow) mainWindow.setPosition(Math.round(x), Math.round(y));
+  });
+
+  // ===== IPC: 获取前台窗口矩形 =====
+  ipcMain.handle('get-foreground-window-rect', () => {
+    if (!win32Monitor?.available) return null;
+    const info = win32Monitor.getForegroundInfo();
+    if (!info) return null;
+    const rect = win32Monitor.getWindowRect(info.hwnd);
+    return rect;
+  });
+
+  // ===== IPC: 停靠追踪 =====
+  ipcMain.on('start-dock-tracking', () => {
+    if (!win32Monitor?.available) return;
+    win32Monitor.startDockTracking((update) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('dock-target-update', update);
+      }
+    });
+  });
+
+  ipcMain.on('stop-dock-tracking', () => {
+    if (win32Monitor) win32Monitor.stopDockTracking();
   });
 
   // ===== IPC: 窗口展开/收缩 =====
@@ -198,6 +228,12 @@ function createWindow() {
         checked: mainWindow.isAlwaysOnTop(),
         click: (item) => mainWindow.setAlwaysOnTop(item.checked)
       },
+      ...(win32Monitor?.available ? [{
+        label: '🪟 坐到窗口上',
+        type: 'checkbox',
+        checked: false,
+        click: (item) => mainWindow.webContents.send('toggle-docking', item.checked)
+      }] : []),
       { type: 'separator' },
       {
         label: '🗑️ 清空对话',
@@ -235,6 +271,8 @@ app.whenReady().then(async () => {
   llmService = new LLMService();
   await llmService.init();
 
+  win32Monitor = new Win32Monitor();
+
   createWindow();
 
   // 注册流式聊天事件转发到渲染进程
@@ -249,6 +287,19 @@ app.whenReady().then(async () => {
       mainWindow.webContents.send('agent-event', payload);
     }
   });
+
+  // Win32 前台窗口轮询
+  if (win32Monitor.available) {
+    win32Monitor.startForegroundPolling((info) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('foreground-app-changed', {
+          title: info.title.slice(0, 200),
+          processName: info.processName,
+          category: info.category,
+        });
+      }
+    }, 4000);
+  }
 
   // Gateway 就绪后通知渲染进程
   if (mainWindow) {
@@ -283,6 +334,7 @@ app.whenReady().then(async () => {
 
 app.on('before-quit', () => {
   if (llmService) llmService.destroy();
+  if (win32Monitor) win32Monitor.destroy();
   if (clipboardInterval) clearInterval(clipboardInterval);
 });
 

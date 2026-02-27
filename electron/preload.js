@@ -49,6 +49,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getGatewayHealth: () => ipcRenderer.invoke('get-gateway-health'),
   getAIProviders: () => ipcRenderer.invoke('get-ai-providers'),
 
+  // === 绝对窗口定位 ===
+  setWindowPosition: (x, y) => ipcRenderer.send('set-window-position', x, y),
+
+  // === Win32 窗口感知 ===
+  getForegroundWindowRect: () => ipcRenderer.invoke('get-foreground-window-rect'),
+  startDockTracking: () => ipcRenderer.send('start-dock-tracking'),
+  stopDockTracking: () => ipcRenderer.send('stop-dock-tracking'),
+
   // === 监听主进程事件 ===
   onToggleChat: (callback) => ipcRenderer.on('toggle-chat', () => callback()),
   onOpenSettings: (callback) => ipcRenderer.on('open-settings', () => callback()),
@@ -63,4 +71,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // === 情感互动事件 ===
   onFeedPet: (callback) => ipcRenderer.on('feed-pet', () => callback()),
   onClipboardChange: (callback) => ipcRenderer.on('clipboard-changed', (e, data) => callback(data)),
+
+  // === Win32 窗口感知事件 ===
+  onForegroundAppChanged: (callback) => ipcRenderer.on('foreground-app-changed', (e, data) => callback(data)),
+  onDockTargetUpdate: (callback) => ipcRenderer.on('dock-target-update', (e, data) => callback(data)),
+  onToggleDocking: (callback) => ipcRenderer.on('toggle-docking', (e, enabled) => callback(enabled)),
 });

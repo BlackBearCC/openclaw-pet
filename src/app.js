@@ -21,6 +21,8 @@ import { FeedingAnimator } from './pet/FeedingAnimator.js';
 import { Bubble } from './ui/Bubble.js';
 import { ChatPanel } from './ui/ChatPanel.js';
 import { SettingsPanel } from './ui/SettingsPanel.js';
+import { IntimacySystem } from './pet/IntimacySystem.js';
+import { FileDropHandler } from './interaction/FileDropHandler.js';
 
 class OpenClawPet {
   constructor() {
@@ -29,6 +31,7 @@ class OpenClawPet {
     this.electronAPI = window.electronAPI || null;
 
     this.spriteSheet = new SpriteSheet();
+    this.kittenSheet = new SpriteSheet();
     this.stateMachine = new StateMachine();
     this.moodSystem = new MoodSystem();
     this.renderer = null;
@@ -41,36 +44,52 @@ class OpenClawPet {
     this.dragHandler = null;
     this.clickHandler = null;
     this.contextMenu = null;
+    this.intimacySystem = null;
+    this.fileDropHandler = null;
 
     this._lastTime = 0;
     this._running = false;
     this._proactiveTimer = null;
     this._pendingClipboard = null; // 待处理的剪贴板内容
+    this._lastAppReaction = 0;    // 窗口感知冷却
+    this._dockingEnabled = false;  // 窗口停靠状态
   }
 
   async init() {
     console.log('🐱 OpenClaw Pet initializing...');
 
-    // 1. 加载 spritesheet
+    // 1. 并行加载 spritesheet（成年猫 + 幼猫）
     try {
-      await this.spriteSheet.load(
-        '../assets/sprites/placeholder/spritesheet.png',
-        '../assets/sprites/placeholder/spritesheet.json'
-      );
-      console.log('✅ Spritesheet loaded');
+      await Promise.all([
+        this.spriteSheet.load(
+          '../assets/sprites/placeholder/spritesheet.png',
+          '../assets/sprites/placeholder/spritesheet.json'
+        ),
+        this.kittenSheet.load(
+          '../assets/sprites/placeholder/spritesheet-kitten.png',
+          '../assets/sprites/placeholder/spritesheet-kitten.json'
+        ).catch(() => {
+          console.warn('⚠️ Kitten spritesheet not found, using adult as fallback');
+        }),
+      ]);
+      console.log('✅ Spritesheets loaded');
     } catch (e) {
       console.error('❌ Failed to load spritesheet:', e);
       this._showFallback();
       return;
     }
 
-    // 2. 初始化渲染器
-    this.renderer = new PetRenderer(this.canvas, this.spriteSheet, 128);
+    // 2. 亲密度系统（需要在渲染器之前初始化，以获取当前阶段）
+    this.intimacySystem = new IntimacySystem();
 
-    // 2b. 喂食动画
+    // 3. 初始化渲染器（传入幼猫 sheet）
+    this.renderer = new PetRenderer(this.canvas, this.spriteSheet, this.kittenSheet, 128);
+    this.renderer.setGrowthStage(this.intimacySystem.stage);
+
+    // 3b. 喂食动画
     this.feedingAnimator = new FeedingAnimator(this.renderer, this.stateMachine);
 
-    // 3. 获取屏幕尺寸
+    // 4. 获取屏幕尺寸
     let screenWidth = 800;
     if (this.electronAPI) {
       try {
@@ -79,7 +98,7 @@ class OpenClawPet {
       } catch (e) {}
     }
 
-    // 4. 行为系统
+    // 5. 行为系统
     this.behaviors = new Behaviors(this.stateMachine, this.renderer, {
       screenWidth,
       walkSpeed: 1.5,
@@ -87,12 +106,47 @@ class OpenClawPet {
       maxIdleTime: 12000,
     });
 
-    // 5. UI 组件
+    // 6. UI 组件
     this.bubble = new Bubble(this.bubbleContainer);
     this.chatPanel = new ChatPanel(this.electronAPI, this.stateMachine, this.bubble);
     this.settingsPanel = new SettingsPanel(this.electronAPI);
 
-    // 6. 交互处理器
+    // 6b. 文件拖拽分析（需在 bubble/chatPanel 初始化之后）
+    this.fileDropHandler = new FileDropHandler(
+      this.canvas, this.electronAPI, this.stateMachine, this.bubble,
+      this.chatPanel, this.intimacySystem
+    );
+
+    // 6c. 里程碑回调（bubble 已初始化，可安全引用）
+    this.intimacySystem.onMilestone((stage, info) => {
+      this.bubble.show(info.milestoneMsg, 4000);
+      this.stateMachine.transition('happy', { force: true, duration: 2000 });
+      this.renderer.setGrowthStage(stage);
+    });
+
+    // 6d. 边缘反应
+    this.behaviors.onEdgeReaction((edge) => {
+      if (this.bubble.isVisible()) return;
+      const msgs = {
+        left: ['撞到了喵！>_<', '这边走不了了...', '哎呀，墙壁！'],
+        right: ['到头了喵！', '碰壁了！>_<', '(碰) 好疼~'],
+      };
+      const pool = msgs[edge];
+      this.bubble.show(pool[Math.floor(Math.random() * pool.length)], 2000);
+    });
+
+    // 6e. 边缘吸附 + 停靠状态气泡
+    this.stateMachine.on('stateChange', ({ to }) => {
+      if (to === 'edge_idle' && this.behaviors.edgeSnapped) {
+        const msgs = {
+          left: '靠在这里休息~ 🐾', right: '在这里看风景~ 🌟',
+          top: '挂在上面啦！😸', bottom: '坐在这里不错~ ✨',
+        };
+        this.bubble.show(msgs[this.behaviors.edgeSnapped], 2500);
+      }
+    });
+
+    // 7. 交互处理器
     this.dragHandler = new DragHandler(
       this.canvas, this.stateMachine, this.behaviors, this.electronAPI
     );
@@ -101,6 +155,7 @@ class OpenClawPet {
       this.canvas, this.stateMachine, this.behaviors, {
         onSingleClick: () => {
           this.moodSystem.gain(3);
+          this.intimacySystem.gain(1);
           const level = this.moodSystem.getLevel();
           const greets = level === 'sad'
             ? ['...喵', '(T_T)', '嗯...', '理我一下嘛']
@@ -114,6 +169,7 @@ class OpenClawPet {
         onLongPress: () => {
           // 摸头！
           this.moodSystem.gain(15);
+          this.intimacySystem.gain(5);
           this.behaviors.recordInteraction();
           const purrs = ['咕噜噜~ 😻', '好舒服喵~', '再摸摸！(=^ω^=)', '呼噜呼噜...', '主人真好~ ❤️', '喵呜~'];
           this.bubble.show(purrs[Math.floor(Math.random() * purrs.length)], 3000);
@@ -170,10 +226,39 @@ class OpenClawPet {
     const hoursSince = (now - lastLaunch) / 3600000;
     localStorage.setItem('pet-last-launch', String(now));
 
+    const stage = this.intimacySystem?.stage ?? 0;
+
+    // 阶段 0：幼猫
+    if (stage === 0) {
+      return '主人...是你吗？(=•ω•=)';
+    }
+
+    // 阶段 3：心灵契合
+    if (stage === 3) {
+      return '终于等到你了，我心里一直有你喵 💖';
+    }
+
+    // 长时间未登录
     if (lastLaunch > 0 && hoursSince > 12) {
+      if (stage === 2) {
+        return `主人回来啦！等你好久了~ 😻 好 ${Math.round(hoursSince)} 小时没见了喵！`;
+      }
       return `好久不见喵！等你 ${Math.round(hoursSince)} 小时了 🥺`;
     }
 
+    // 阶段 2：亲密伙伴
+    if (stage === 2) {
+      const hour = new Date().getHours();
+      const suffix = hour >= 5 && hour < 9   ? '今天也加油哦~ ☀️'
+                   : hour >= 9 && hour < 12  ? '有什么需要帮忙的吗？😊'
+                   : hour >= 12 && hour < 14 ? '吃饭了吗~'
+                   : hour >= 14 && hour < 18 ? '在认真工作呢？'
+                   : hour >= 18 && hour < 21 ? '辛苦了一天~'
+                   : '别忘了休息哦 💤';
+      return `主人回来啦！等你好久了~ 😻 ${suffix}`;
+    }
+
+    // 阶段 1：朋友（保持原有时段问候）
     const hour = new Date().getHours();
     if (hour >= 5 && hour < 9)  return '早上好主人！今天也加油哦~ ☀️';
     if (hour >= 9 && hour < 12) return '上午好~ 有什么需要帮忙的吗？😊';
@@ -270,16 +355,81 @@ class OpenClawPet {
       this.bubble.show('对话已清空~ 重新开始吧！', 2000);
     });
 
+    // AI 聊天回复完成 → 亲密度 +3
+    this.electronAPI.onChatStream?.((payload) => {
+      if (payload?.state === 'final') {
+        this.intimacySystem.gain(3);
+      }
+    });
+
     // 喂零食 — 完整 4 阶段动画
     this.electronAPI.onFeedPet?.(() => {
       if (this.feedingAnimator.isPlaying) return; // 防止动画叠加
       this.behaviors.recordInteraction();
       this.feedingAnimator.play(() => {
-        // 动画结束后：加心情 + 显示气泡
+        // 动画结束后：加心情 + 加亲密度 + 显示气泡
         this.moodSystem.gain(20);
+        this.intimacySystem.gain(10);
         const foods = ['好吃！~ 😋', '喵呜~ 谢谢主人！', '啊好香！还有吗！', '(=^・ω・^=) 满足了~', '最喜欢主人了！❤️'];
         this.bubble.show(foods[Math.floor(Math.random() * foods.length)], 3000);
       });
+    });
+
+    // 活动窗口感知
+    this.electronAPI.onForegroundAppChanged?.((data) => {
+      // 停靠中 → 窗口切换自动解除
+      if (this._dockingEnabled) {
+        this._disableDocking();
+        this.bubble.show('窗口切换了，我下来了喵~', 2000);
+        return;
+      }
+
+      if (this.chatPanel.isOpen || this.bubble.isVisible()) return;
+      if (this._lastAppReaction && Date.now() - this._lastAppReaction < 30000) return;
+
+      const reactions = {
+        code_editor: ['你在写代码呀！加油！💻', '认真coding中~ 我安静陪着你喵'],
+        browser:     ['又在刷网页~ 😼', '看到什么有趣的了吗？'],
+        chat:        ['在跟谁聊天呀？🤔', '不要忘了我喵！'],
+        game:        ['在玩游戏！好嫉妒！🎮', '也带我玩嘛~'],
+        terminal:    ['在敲命令行呢~ 酷！⌨️'],
+        media:       ['在听音乐/看视频呢~ 🎵'],
+        office:      ['在处理文档呢~ 📄', '辛苦了！'],
+      };
+      const pool = reactions[data.category];
+      if (!pool || Math.random() > 0.4) return;
+
+      this._lastAppReaction = Date.now();
+      this.bubble.show(pool[Math.floor(Math.random() * pool.length)], 4000);
+      this.stateMachine.transition('idle2', { force: true, duration: 2000 });
+    });
+
+    // 窗口停靠开关
+    this.electronAPI.onToggleDocking?.((enabled) => {
+      if (enabled) {
+        this._dockingEnabled = true;
+        this.behaviors.setDocking(true);
+        this.electronAPI.startDockTracking();
+        this.stateMachine.transition('sit', { force: true });
+        this.bubble.show('坐到窗口上面啦！😸', 2500);
+      } else {
+        this._disableDocking();
+      }
+    });
+
+    // 停靠目标位置更新
+    this.electronAPI.onDockTargetUpdate?.((update) => {
+      if (!this._dockingEnabled) return;
+      if (update.minimized) {
+        this._disableDocking();
+        this.bubble.show('窗口最小化了，我下来了喵~', 2000);
+        return;
+      }
+      const { left, top, right } = update.rect;
+      const petX = Math.round(left + (right - left) / 2 - 100);
+      const petY = Math.max(0, Math.round(top - 250));
+      this.electronAPI.setWindowPosition(petX, petY);
+      this.behaviors.setPosition(petX, petY);
     });
 
     // 剪贴板感知
@@ -297,6 +447,13 @@ class OpenClawPet {
       this.bubble.show(hint, 6000);
       this.stateMachine.transition('idle2', { force: true, duration: 2000 }); // 侧耳倾听
     });
+  }
+
+  _disableDocking() {
+    this._dockingEnabled = false;
+    this.behaviors.setDocking(false);
+    this.electronAPI?.stopDockTracking();
+    this.stateMachine.transition('idle', { force: true });
   }
 
   _startMainLoop() {
@@ -338,6 +495,7 @@ class OpenClawPet {
     this.dragHandler?.destroy();
     this.clickHandler?.destroy();
     this.contextMenu?.destroy();
+    this.fileDropHandler?.destroy();
     this.bubble?.destroy();
     this.chatPanel?.destroy();
     this.settingsPanel?.destroy();

@@ -25,21 +25,22 @@ export class StateMachine {
   }
 
   _buildTransitions() {
-    const fromIdle = ['walk', 'sit', 'sleep', 'drag', 'click_react', 'talk', 'happy', 'sad', 'idle2', 'idle3', 'eat'];
+    const fromIdle = ['walk', 'sit', 'sleep', 'drag', 'click_react', 'talk', 'happy', 'sad', 'idle2', 'idle3', 'eat', 'edge_idle'];
     const interruptible = ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad'];
     return {
       idle:        fromIdle,
-      idle2:       ['idle', ...interruptible, 'eat'],
-      idle3:       ['idle', ...interruptible, 'eat'],
-      walk:        ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad', 'eat'],
-      sit:         ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad', 'eat'],
-      sleep:       ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad', 'eat'],
-      drag:        ['idle'],
-      click_react: ['idle', 'walk', 'sit', 'sleep'],
-      talk:        ['idle'],
-      happy:       ['idle'],
-      sad:         ['idle'],
-      eat:         ['idle', 'happy'],
+      idle2:       ['idle', ...interruptible, 'eat', 'edge_idle'],
+      idle3:       ['idle', ...interruptible, 'eat', 'edge_idle'],
+      walk:        ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad', 'eat', 'edge_idle'],
+      sit:         ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad', 'eat', 'edge_idle'],
+      sleep:       ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad', 'eat', 'edge_idle'],
+      drag:        ['idle', 'edge_idle'],
+      click_react: ['idle', 'walk', 'sit', 'sleep', 'edge_idle'],
+      talk:        ['idle', 'edge_idle'],
+      happy:       ['idle', 'edge_idle'],
+      sad:         ['idle', 'edge_idle'],
+      eat:         ['idle', 'happy', 'edge_idle'],
+      edge_idle:   ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad', 'eat'],
     };
   }
 
@@ -98,7 +99,7 @@ export class StateMachine {
    */
   _getReturnState() {
     // 临时状态结束后返回 idle
-    const tempStates = ['click_react', 'happy', 'sad', 'talk', 'drag', 'idle2', 'idle3', 'eat'];
+    const tempStates = ['click_react', 'happy', 'sad', 'talk', 'drag', 'idle2', 'idle3', 'eat', 'edge_idle'];
     if (tempStates.includes(this.previousState)) {
       return 'idle';
     }
@@ -109,7 +110,7 @@ export class StateMachine {
    * 判断是否处于任意 idle 变体
    */
   isIdle() {
-    return this.currentState === 'idle' || this.currentState === 'idle2' || this.currentState === 'idle3';
+    return this.currentState === 'idle' || this.currentState === 'idle2' || this.currentState === 'idle3' || this.currentState === 'edge_idle';
   }
 
   /**

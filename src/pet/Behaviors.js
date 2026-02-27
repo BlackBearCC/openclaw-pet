@@ -48,6 +48,15 @@ export class Behaviors {
     // 走动目标
     this.walkTarget = null;
 
+    // 边缘反应
+    this._edgeListeners = [];
+
+    // 边缘吸附
+    this.edgeSnapped = null;
+
+    // 窗口停靠
+    this.isDocking = false;
+
     // 绑定状态变化监听
     this.sm.on('stateChange', (e) => this._onStateChange(e));
   }
@@ -82,6 +91,7 @@ export class Behaviors {
    */
   update(deltaMs) {
     if (!this.isActive) return;
+    if (this.isDocking) return; // 停靠模式下跳过自主行为
 
     const state = this.sm.getState();
 
@@ -93,6 +103,19 @@ export class Behaviors {
 
       // 更新朝向
       this.renderer.setFlipX(dir < 0);
+
+      // 边缘检测（在 clamp 之前）
+      const EDGE_ZONE = 20;
+      if ((this.x <= this.config.bounds.left + EDGE_ZONE && dir === -1) ||
+          (this.x >= this.config.bounds.right - 128 - EDGE_ZONE && dir === 1)) {
+        const edge = dir === -1 ? 'left' : 'right';
+        this.x = Math.max(this.config.bounds.left, Math.min(this.config.bounds.right - 128, this.x));
+        this.walkTarget = null;
+        this._emitEdgeReaction(edge);
+        this.sm.transition('click_react', { force: true, duration: 800 });
+        this.renderer.setFlipX(edge === 'right');
+        return;
+      }
 
       // 到达目标
       if (Math.abs(this.x - this.walkTarget) < step) {
@@ -145,6 +168,8 @@ export class Behaviors {
    * 触发随机行为
    */
   _triggerRandomBehavior() {
+    // 吸附/停靠中不触发随机行为
+    if (this.edgeSnapped || this.isDocking) return;
     // 只在任意 idle 变体下触发随机行为
     if (!this.sm.isIdle()) return;
 
@@ -186,6 +211,7 @@ export class Behaviors {
    * 开始走动
    */
   _startWalk() {
+    this.edgeSnapped = null; // 开始走动时清除吸附
     // 随机选择走动目标
     const range = this.config.bounds.right - this.config.bounds.left - 128;
     this.walkTarget = this.config.bounds.left + Math.random() * range;
@@ -225,6 +251,24 @@ export class Behaviors {
    */
   setBounds(bounds) {
     Object.assign(this.config.bounds, bounds);
+  }
+
+  // ===== 边缘反应 =====
+
+  onEdgeReaction(cb) { this._edgeListeners.push(cb); }
+  _emitEdgeReaction(edge) { this._edgeListeners.forEach(cb => cb(edge)); }
+
+  // ===== 边缘吸附 =====
+
+  setEdgeSnapped(edge) {
+    this.edgeSnapped = edge;
+    if (edge) this.walkTarget = null;
+  }
+
+  // ===== 窗口停靠 =====
+
+  setDocking(enabled) {
+    this.isDocking = enabled;
   }
 
   /**
