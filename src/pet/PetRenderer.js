@@ -41,6 +41,9 @@ export class PetRenderer {
     this._breathPeriod = 3200;  // 一次完整呼吸 3.2s
     this._breathAmount = 0.018; // 垂直缩放幅度 ±1.8%
 
+    // overlay 绘制回调（用于叠加动画，如喂食特效）
+    this.overlayDrawFn = null;
+
     // 启用像素风格渲染（锐利边缘）
     this.ctx.imageSmoothingEnabled = false;
   }
@@ -169,6 +172,11 @@ export class PetRenderer {
     );
 
     this.ctx.restore();
+
+    // overlay 绘制（叠加在猫咪之上）
+    if (this.overlayDrawFn) {
+      this.overlayDrawFn(this.ctx, w, h);
+    }
   }
 
   /**

@@ -17,6 +17,7 @@ import { MoodSystem } from './pet/MoodSystem.js';
 import { DragHandler } from './interaction/DragHandler.js';
 import { ClickHandler } from './interaction/ClickHandler.js';
 import { ContextMenu } from './interaction/ContextMenu.js';
+import { FeedingAnimator } from './pet/FeedingAnimator.js';
 import { Bubble } from './ui/Bubble.js';
 import { ChatPanel } from './ui/ChatPanel.js';
 import { SettingsPanel } from './ui/SettingsPanel.js';
@@ -36,6 +37,7 @@ class OpenClawPet {
     this.chatPanel = null;
     this.settingsPanel = null;
 
+    this.feedingAnimator = null;
     this.dragHandler = null;
     this.clickHandler = null;
     this.contextMenu = null;
@@ -64,6 +66,9 @@ class OpenClawPet {
 
     // 2. 初始化渲染器
     this.renderer = new PetRenderer(this.canvas, this.spriteSheet, 128);
+
+    // 2b. 喂食动画
+    this.feedingAnimator = new FeedingAnimator(this.renderer, this.stateMachine);
 
     // 3. 获取屏幕尺寸
     let screenWidth = 800;
@@ -265,13 +270,16 @@ class OpenClawPet {
       this.bubble.show('对话已清空~ 重新开始吧！', 2000);
     });
 
-    // 喂零食
+    // 喂零食 — 完整 4 阶段动画
     this.electronAPI.onFeedPet?.(() => {
-      this.moodSystem.gain(20);
+      if (this.feedingAnimator.isPlaying) return; // 防止动画叠加
       this.behaviors.recordInteraction();
-      const foods = ['好吃！~ 😋', '喵呜~ 谢谢主人！', '啊好香！还有吗！', '(=^・ω・^=) 满足了~', '最喜欢主人了！❤️'];
-      this.bubble.show(foods[Math.floor(Math.random() * foods.length)], 3000);
-      this.stateMachine.transition('happy', { force: true, duration: 1500 });
+      this.feedingAnimator.play(() => {
+        // 动画结束后：加心情 + 显示气泡
+        this.moodSystem.gain(20);
+        const foods = ['好吃！~ 😋', '喵呜~ 谢谢主人！', '啊好香！还有吗！', '(=^・ω・^=) 满足了~', '最喜欢主人了！❤️'];
+        this.bubble.show(foods[Math.floor(Math.random() * foods.length)], 3000);
+      });
     });
 
     // 剪贴板感知

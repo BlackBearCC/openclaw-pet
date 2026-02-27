@@ -33,6 +33,7 @@ const ANIMATIONS = {
   talk:        { frames: 4, row: 8 },
   idle2:       { frames: 4, row: 9  },  // 耳朵抖动 / 扭头
   idle3:       { frames: 4, row: 10 },  // 哈欠
+  eat:         { frames: 4, row: 11 },  // 吃东西：闭嘴→大张嘴→咀嚼→舔嘴
 };
 
 const COLS = 8;
@@ -252,6 +253,36 @@ function idle3Modifier(frame) {
   };
 }
 
+// eat: 吃东西 — frame0 闭嘴期待，frame1 嘴大张+眼睛亮，frame2 咀嚼（半闭嘴），frame3 舔嘴满足
+function eatModifier(frame) {
+  return (cx, cy, idx, color) => {
+    if (frame === 0) {
+      // 闭嘴，眼睛睁大期待
+      if (idx === 3) return [20, 20, 20, 255]; // big bright eyes
+      if (idx === 5) return [200, 140, 80, 255]; // mouth closed
+      return [Math.min(255, color[0] + 10), Math.min(255, color[1] + 10), color[2], color[3]];
+    }
+    if (frame === 1) {
+      // 嘴巴大张，眼睛发亮
+      if (idx === 3) return [15, 15, 15, 255]; // extra bright eyes
+      if (idx === 5) return [180, 60, 60, 255]; // mouth wide open (red)
+      if (idx === 4) return [240, 120, 140, 255]; // nose excited
+      return [Math.min(255, color[0] + 20), Math.min(255, color[1] + 15), color[2], color[3]];
+    }
+    if (frame === 2) {
+      // 咀嚼，嘴半闭，眼眯
+      if (idx === 3) return cy % 2 === 0 ? [0, 0, 0, 0] : [30, 30, 30, 255]; // squinting
+      if (idx === 5) return [210, 100, 80, 255]; // half-closed mouth
+      return color;
+    }
+    // frame 3: 舔嘴满足
+    if (idx === 3) return [0, 0, 0, 0]; // eyes closed in bliss
+    if (idx === 5) return [255, 120, 140, 255]; // tongue out / licking lips (pink)
+    if (idx === 4) return [255, 140, 160, 255]; // pink satisfied nose
+    return [Math.min(255, color[0] + 15), Math.min(255, color[1] + 15), color[2], color[3]];
+  };
+}
+
 const MODIFIERS = {
   idle: idleModifier,
   walk: walkModifier,
@@ -264,6 +295,7 @@ const MODIFIERS = {
   talk: talkModifier,
   idle2: idle2Modifier,
   idle3: idle3Modifier,
+  eat: eatModifier,
 };
 
 // ===== PNG Encoder (minimal, no dependencies) =====
@@ -368,8 +400,8 @@ function generate() {
 
     spritesheetMeta.animations[animName] = {
       frames,
-      fps: animName === 'sleep' ? 4 : animName === 'idle3' ? 6 : 8,
-      loop: !['click_react', 'happy', 'sad', 'idle3'].includes(animName)
+      fps: animName === 'sleep' ? 4 : animName === 'idle3' ? 6 : animName === 'eat' ? 6 : 8,
+      loop: !['click_react', 'happy', 'sad', 'idle3', 'eat'].includes(animName)
     };
   }
 
