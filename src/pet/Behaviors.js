@@ -42,6 +42,7 @@ export class Behaviors {
     this.lastInteractionTime = Date.now();
     this.walkDirection = 1; // 1=右, -1=左
     this.nextBehaviorTimer = null;
+    this.idleVariantTimer = null;
     this.isActive = false;
 
     // 走动目标
@@ -57,6 +58,7 @@ export class Behaviors {
   start() {
     this.isActive = true;
     this._scheduleNextBehavior();
+    this._scheduleIdleVariant();
   }
 
   /**
@@ -67,6 +69,10 @@ export class Behaviors {
     if (this.nextBehaviorTimer) {
       clearTimeout(this.nextBehaviorTimer);
       this.nextBehaviorTimer = null;
+    }
+    if (this.idleVariantTimer) {
+      clearTimeout(this.idleVariantTimer);
+      this.idleVariantTimer = null;
     }
   }
 
@@ -100,7 +106,7 @@ export class Behaviors {
     }
 
     // 检查是否该打盹了
-    if (!this.sm.isLocked() && state === 'idle') {
+    if (!this.sm.isLocked() && this.sm.isIdle()) {
       const idleTime = Date.now() - this.lastInteractionTime;
       if (idleTime > this.config.sleepThreshold) {
         this.sm.transition('sleep');
@@ -139,22 +145,41 @@ export class Behaviors {
    * 触发随机行为
    */
   _triggerRandomBehavior() {
-    const state = this.sm.getState();
-
-    // 只在 idle 状态下触发随机行为
-    if (state !== 'idle') return;
+    // 只在任意 idle 变体下触发随机行为
+    if (!this.sm.isIdle()) return;
 
     const roll = Math.random();
 
     if (roll < 0.4) {
-      // 40% 概率走动
       this._startWalk();
     } else if (roll < 0.6) {
-      // 20% 概率坐下
       this.sm.transition('sit', { duration: 5000 + Math.random() * 5000 });
-    } else {
-      // 40% 保持待机（什么都不做）
     }
+    // 40% 保持当前待机（什么都不做）
+  }
+
+  /**
+   * 定期在三种 idle 变体之间随机切换
+   * idle → idle2（耳朵抖动）→ idle → idle3（哈欠）→ idle → ...
+   */
+  _scheduleIdleVariant() {
+    if (!this.isActive) return;
+
+    const delay = 8000 + Math.random() * 9000; // 8-17s 触发一次
+
+    this.idleVariantTimer = setTimeout(() => {
+      if (this.isActive && this.sm.getState() === 'idle' && !this.sm.isLocked()) {
+        const roll = Math.random();
+        if (roll < 0.5) {
+          // idle2: 耳朵抖动，持续 2-3s
+          this.sm.transition('idle2', { duration: 2000 + Math.random() * 1000 });
+        } else {
+          // idle3: 哈欠，持续 1.5-2.5s
+          this.sm.transition('idle3', { duration: 1500 + Math.random() * 1000 });
+        }
+      }
+      this._scheduleIdleVariant();
+    }, delay);
   }
 
   /**

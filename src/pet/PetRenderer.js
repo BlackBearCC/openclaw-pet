@@ -36,6 +36,11 @@ export class PetRenderer {
     this._lastTime = 0;
     this._animFrameId = null;
 
+    // 呼吸效果
+    this._totalTime = 0;
+    this._breathPeriod = 3200;  // 一次完整呼吸 3.2s
+    this._breathAmount = 0.018; // 垂直缩放幅度 ±1.8%
+
     // 启用像素风格渲染（锐利边缘）
     this.ctx.imageSmoothingEnabled = false;
   }
@@ -107,6 +112,7 @@ export class PetRenderer {
    * 更新帧
    */
   _updateFrame(deltaMs) {
+    this._totalTime += deltaMs;
     const fps = this.spriteSheet.getFPS(this.currentAnimation);
     const frameDuration = 1000 / fps;
     const anim = this.spriteSheet.getAnimation(this.currentAnimation);
@@ -136,11 +142,21 @@ export class PetRenderer {
    * 渲染当前帧
    */
   _render() {
-    // 清除画布（透明）
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    const w = this.canvas.width;
+    const h = this.canvas.height;
 
-    // 保持像素锐利
+    // 清除画布（透明）
+    this.ctx.clearRect(0, 0, w, h);
     this.ctx.imageSmoothingEnabled = false;
+
+    // 呼吸效果：以底部为锚点，垂直轻微缩放
+    const breathPhase = (this._totalTime % this._breathPeriod) / this._breathPeriod;
+    const breathScale = 1 + this._breathAmount * Math.sin(breathPhase * Math.PI * 2);
+
+    this.ctx.save();
+    this.ctx.translate(w / 2, h);          // 锚点移到底部中心
+    this.ctx.scale(1, breathScale);         // 仅垂直方向缩放
+    this.ctx.translate(-w / 2, -h);        // 还原
 
     // 绘制当前帧
     this.spriteSheet.drawFrame(
@@ -151,6 +167,8 @@ export class PetRenderer {
       this.renderSize, this.renderSize,
       this.flipX
     );
+
+    this.ctx.restore();
   }
 
   /**

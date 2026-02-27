@@ -31,6 +31,8 @@ const ANIMATIONS = {
   happy:       { frames: 4, row: 6 },
   sad:         { frames: 4, row: 7 },
   talk:        { frames: 4, row: 8 },
+  idle2:       { frames: 4, row: 9  },  // 耳朵抖动 / 扭头
+  idle3:       { frames: 4, row: 10 },  // 哈欠
 };
 
 const COLS = 8;
@@ -215,6 +217,41 @@ function talkModifier(frame) {
   };
 }
 
+// idle2: 耳朵抖动 — 左耳在 frame0-1 闪亮，frame2-3 右耳闪亮，像在侧耳聆听
+function idle2Modifier(frame) {
+  return (cx, cy, idx, color) => {
+    // 耳朵根据帧左右交替闪亮
+    if (idx === 2) {
+      const leftEar = cx < 12;
+      if (leftEar && frame < 2)  return [Math.min(255, color[0] + 40), Math.min(255, color[1] + 20), color[2], color[3]];
+      if (!leftEar && frame >= 2) return [Math.min(255, color[0] + 40), Math.min(255, color[1] + 20), color[2], color[3]];
+    }
+    // 眼睛轻微眯眼（像在专注听声音）
+    if (idx === 3 && cy % 2 === 1) return [0, 0, 0, 0];
+    return color;
+  };
+}
+
+// idle3: 哈欠 — frame0 正常，frame1 眼睛开始闭，frame2 眼闭嘴张，frame3 恢复
+function idle3Modifier(frame) {
+  return (cx, cy, idx, color) => {
+    if (idx === 3) {
+      // frame1-2 眼睛闭合
+      if (frame === 1) return cy % 2 === 0 ? [0, 0, 0, 0] : color;
+      if (frame === 2) return [0, 0, 0, 0];
+    }
+    if (idx === 5 && frame === 2) {
+      // 嘴巴大张（哈欠）
+      return [180, 70, 70, 255];
+    }
+    if (idx === 4 && frame === 2) {
+      // 鼻子微微上移感（颜色加深）
+      return [220, 100, 120, 255];
+    }
+    return color;
+  };
+}
+
 const MODIFIERS = {
   idle: idleModifier,
   walk: walkModifier,
@@ -225,6 +262,8 @@ const MODIFIERS = {
   happy: happyModifier,
   sad: sadModifier,
   talk: talkModifier,
+  idle2: idle2Modifier,
+  idle3: idle3Modifier,
 };
 
 // ===== PNG Encoder (minimal, no dependencies) =====
@@ -329,8 +368,8 @@ function generate() {
 
     spritesheetMeta.animations[animName] = {
       frames,
-      fps: animName === 'sleep' ? 4 : 8,
-      loop: !['click_react', 'happy', 'sad'].includes(animName)
+      fps: animName === 'sleep' ? 4 : animName === 'idle3' ? 6 : 8,
+      loop: !['click_react', 'happy', 'sad', 'idle3'].includes(animName)
     };
   }
 

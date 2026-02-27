@@ -25,17 +25,20 @@ export class StateMachine {
   }
 
   _buildTransitions() {
-    // 定义允许的状态转换
+    const fromIdle = ['walk', 'sit', 'sleep', 'drag', 'click_react', 'talk', 'happy', 'sad', 'idle2', 'idle3'];
+    const interruptible = ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad'];
     return {
-      idle: ['walk', 'sit', 'sleep', 'drag', 'click_react', 'talk', 'happy', 'sad'],
-      walk: ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad'],
-      sit: ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad'],
-      sleep: ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad'],
-      drag: ['idle'],
-      click_react: ['idle', 'walk', 'sit', 'sleep'], // 回到之前的状态
-      talk: ['idle'],
-      happy: ['idle'],
-      sad: ['idle'],
+      idle:        fromIdle,
+      idle2:       ['idle', ...interruptible],
+      idle3:       ['idle', ...interruptible],
+      walk:        ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad'],
+      sit:         ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad'],
+      sleep:       ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad'],
+      drag:        ['idle'],
+      click_react: ['idle', 'walk', 'sit', 'sleep'],
+      talk:        ['idle'],
+      happy:       ['idle'],
+      sad:         ['idle'],
     };
   }
 
@@ -93,12 +96,19 @@ export class StateMachine {
    * 获取临时状态结束后应该返回的状态
    */
   _getReturnState() {
-    // 如果之前是临时状态，返回 idle
-    const tempStates = ['click_react', 'happy', 'sad', 'talk', 'drag'];
+    // 临时状态结束后返回 idle
+    const tempStates = ['click_react', 'happy', 'sad', 'talk', 'drag', 'idle2', 'idle3'];
     if (tempStates.includes(this.previousState)) {
       return 'idle';
     }
     return this.previousState;
+  }
+
+  /**
+   * 判断是否处于任意 idle 变体
+   */
+  isIdle() {
+    return this.currentState === 'idle' || this.currentState === 'idle2' || this.currentState === 'idle3';
   }
 
   /**
