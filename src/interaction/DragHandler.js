@@ -22,8 +22,10 @@ export class DragHandler {
     this.electronAPI = electronAPI;
 
     this.isDragging = false;
+    this._isMouseDown = false;
     this.dragStartX = 0;
     this.dragStartY = 0;
+    this._dragThreshold = 5; // 移动超过 5px 才算拖拽
 
     this._onMouseDown = this._onMouseDown.bind(this);
     this._onMouseMove = this._onMouseMove.bind(this);
@@ -33,33 +35,33 @@ export class DragHandler {
   }
 
   _onMouseDown(e) {
-    if (e.button !== 0) return; // 只响应左键
+    if (e.button !== 0) return;
 
-    this.isDragging = true;
+    this._isMouseDown = true;
+    this.isDragging = false; // 不立即进入拖拽
     this.dragStartX = e.screenX;
     this.dragStartY = e.screenY;
-
-    // 切换到拖拽状态
-    this.sm.transition('drag', { force: true });
-    this.behaviors.recordInteraction();
-
-    // 通知 Electron 开始拖拽窗口
-    if (this.electronAPI && this.electronAPI.startDrag) {
-      this.electronAPI.startDrag();
-    }
 
     document.addEventListener('mousemove', this._onMouseMove);
     document.addEventListener('mouseup', this._onMouseUp);
   }
 
   _onMouseMove(e) {
-    if (!this.isDragging) return;
+    if (!this._isMouseDown) return;
 
     const dx = e.screenX - this.dragStartX;
     const dy = e.screenY - this.dragStartY;
 
-    // 通知 Electron 移动窗口
-    if (this.electronAPI && this.electronAPI.moveWindow) {
+    // 首次达到阈值时才进入拖拽模式
+    if (!this.isDragging) {
+      if (Math.abs(dx) + Math.abs(dy) < this._dragThreshold) return;
+      this.isDragging = true;
+      this.sm.transition('drag', { force: true });
+      this.behaviors.recordInteraction();
+      if (this.electronAPI?.startDrag) this.electronAPI.startDrag();
+    }
+
+    if (this.electronAPI?.moveWindow) {
       this.electronAPI.moveWindow(dx, dy);
     }
 
@@ -68,10 +70,13 @@ export class DragHandler {
   }
 
   _onMouseUp(e) {
-    if (!this.isDragging) return;
-
+    const wasDragging = this.isDragging;
+    this._isMouseDown = false;
     this.isDragging = false;
-    this.sm.transition('idle', { force: true });
+
+    if (wasDragging) {
+      this.sm.transition('idle', { force: true });
+    }
 
     // 更新 behaviors 中的位置信息
     if (this.electronAPI && this.electronAPI.getWindowPosition) {

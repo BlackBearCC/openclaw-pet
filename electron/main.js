@@ -216,6 +216,12 @@ function createWindow() {
     menu.popup({ window: mainWindow });
   });
 
+  // 渲染进程日志转发
+  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    const prefix = ['[renderer]', '[renderer:WARN]', '[renderer:ERR]'][level] || '[renderer]';
+    console.log(`${prefix} ${message}`);
+  });
+
   // 开发模式
   if (process.argv.includes('--dev')) {
     mainWindow.webContents.openDevTools({ mode: 'detach' });

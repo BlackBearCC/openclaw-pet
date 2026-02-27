@@ -16,7 +16,7 @@ export class Bubble {
     this.element.className = 'pet-bubble';
     this.element.style.cssText = `
       position: absolute;
-      top: -60px;
+      top: 50px;
       left: 50%;
       transform: translateX(-50%);
       background: white;
@@ -26,7 +26,7 @@ export class Bubble {
       font-size: 12px;
       font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
       color: #333;
-      max-width: 200px;
+      max-width: 180px;
       word-wrap: break-word;
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
       opacity: 0;
