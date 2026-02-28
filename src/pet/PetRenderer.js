@@ -45,7 +45,8 @@ export class PetRenderer {
     this._breathAmount = 0.018; // 垂直缩放幅度 ±1.8%
 
     // overlay 绘制回调（用于叠加动画，如喂食特效）
-    this.overlayDrawFn = null;
+    this.overlayDrawFn = null;   // 兼容旧 API
+    this._overlays = [];         // 多 overlay 数组
 
     // 启用像素风格渲染（锐利边缘）
     this.ctx.imageSmoothingEnabled = false;
@@ -58,6 +59,12 @@ export class PetRenderer {
   setGrowthStage(stage) {
     this._growthStage = stage;
   }
+
+  /** 添加 overlay 绘制回调 */
+  addOverlay(fn) { this._overlays.push(fn); }
+
+  /** 移除 overlay 绘制回调 */
+  removeOverlay(fn) { this._overlays = this._overlays.filter(f => f !== fn); }
 
   /**
    * 设置当前动画
@@ -222,6 +229,9 @@ export class PetRenderer {
     // overlay 绘制（叠加在猫咪之上）
     if (this.overlayDrawFn) {
       this.overlayDrawFn(this.ctx, w, h);
+    }
+    for (const fn of this._overlays) {
+      fn(this.ctx, w, h);
     }
   }
 

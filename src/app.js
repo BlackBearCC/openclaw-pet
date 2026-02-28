@@ -23,6 +23,9 @@ import { ChatPanel } from './ui/ChatPanel.js';
 import { SettingsPanel } from './ui/SettingsPanel.js';
 import { IntimacySystem } from './pet/IntimacySystem.js';
 import { FileDropHandler } from './interaction/FileDropHandler.js';
+import { ToolStatusBar } from './ui/ToolStatusBar.js';
+import { MiniCatSystem } from './pet/MiniCatSystem.js';
+import { SkillPanel } from './ui/SkillPanel.js';
 
 class OpenClawPet {
   constructor() {
@@ -46,6 +49,9 @@ class OpenClawPet {
     this.contextMenu = null;
     this.intimacySystem = null;
     this.fileDropHandler = null;
+    this.toolStatusBar = null;
+    this.miniCatSystem = null;
+    this.skillPanel = null;
 
     this._lastTime = 0;
     this._running = false;
@@ -145,6 +151,20 @@ class OpenClawPet {
         this.bubble.show(msgs[this.behaviors.edgeSnapped], 2500);
       }
     });
+
+    // 6f. 头顶状态条
+    this.toolStatusBar = new ToolStatusBar(document.getElementById('pet-area'));
+
+    // 6g. 小分身系统
+    this.miniCatSystem = new MiniCatSystem(
+      document.getElementById('pet-area'),
+      this.spriteSheet,
+      this.electronAPI
+    );
+    this.miniCatSystem.start();
+
+    // 6h. 技能图鉴
+    this.skillPanel = new SkillPanel(this.electronAPI);
 
     // 7. 交互处理器
     this.dragHandler = new DragHandler(
@@ -301,9 +321,14 @@ class OpenClawPet {
       // 1. 鼠标在打开的面板上 → 不穿透
       const chatPanel = document.getElementById('chat-panel');
       const settingsPanel = document.getElementById('settings-panel');
+      const skillPanel = document.getElementById('skill-panel');
+      // mini-cat 元素也需要阻止穿透
+      const miniCatEl = e.target.closest?.('.mini-cat');
       const isOverPanel =
+        !!miniCatEl ||
         (chatPanel?.classList.contains('open') && chatPanel.contains(e.target)) ||
-        (settingsPanel?.classList.contains('open') && settingsPanel.contains(e.target));
+        (settingsPanel?.classList.contains('open') && settingsPanel.contains(e.target)) ||
+        (skillPanel?.classList.contains('open') && skillPanel.contains(e.target));
 
       if (isOverPanel) {
         this.electronAPI.setIgnoreMouse(false);
@@ -432,6 +457,42 @@ class OpenClawPet {
       this.behaviors.setPosition(petX, petY);
     });
 
+    // 技能图鉴打开
+    this.electronAPI.onOpenSkills?.(() => {
+      if (this.chatPanel.isOpen) this.chatPanel.close();
+      if (this.settingsPanel.isOpen) this.settingsPanel.close();
+      this.skillPanel.open();
+    });
+
+    // Agent 事件分发 — 状态条 + 小分身 + 活动状态映射
+    this.electronAPI.onAgentEvent?.((event) => {
+      // 1. 分发给小分身系统
+      this.miniCatSystem?.onAgentEvent(event);
+
+      // 2. 工具调用 → 头顶状态条
+      if (event.stream === 'tool') {
+        const toolName = event.data?.tool || event.data?.name || 'working';
+        if (event.data?.phase === 'start' || event.data?.status === 'running') {
+          this.toolStatusBar.show(toolName);
+        } else if (event.data?.phase === 'complete' || event.data?.phase === 'error') {
+          this.toolStatusBar.hide();
+        }
+      }
+
+      // 3. 生命周期 → 宠物动画
+      if (event.stream === 'lifecycle') {
+        if (event.data?.phase === 'thinking' || event.data?.phase === 'running') {
+          const interruptible = ['idle', 'idle2', 'idle3', 'walk', 'sit', 'sleep'];
+          if (interruptible.includes(this.stateMachine.currentState)) {
+            this.stateMachine.transition('talk', { force: true });
+          }
+        } else if (event.data?.phase === 'complete') {
+          this.stateMachine.transition('happy', { force: true, duration: 1500 });
+          this.bubble.show('任务完成了喵！✨', 2000);
+        }
+      }
+    });
+
     // 剪贴板感知
     this.electronAPI.onClipboardChange?.((data) => {
       if (this.chatPanel.isOpen || this.bubble.isVisible()) return;
@@ -496,6 +557,9 @@ class OpenClawPet {
     this.clickHandler?.destroy();
     this.contextMenu?.destroy();
     this.fileDropHandler?.destroy();
+    this.toolStatusBar?.destroy();
+    this.miniCatSystem?.destroy();
+    this.skillPanel?.destroy();
     this.bubble?.destroy();
     this.chatPanel?.destroy();
     this.settingsPanel?.destroy();
