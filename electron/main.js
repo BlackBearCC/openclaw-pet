@@ -13,6 +13,19 @@ const path = require('path');
 const { LLMService, AI_PROVIDERS } = require('./llm-service');
 const { Win32Monitor } = require('./win32-monitor');
 
+// ===== 单实例锁 =====
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  // 这是第二个实例：通知第一个实例重启，然后退出
+  app.quit();
+}
+
+// 第一个实例收到"有第二个实例想启动"的通知 → 重启自身
+app.on('second-instance', () => {
+  app.relaunch();
+  app.quit();
+});
+
 let mainWindow = null;
 let llmService = null;
 let win32Monitor = null;

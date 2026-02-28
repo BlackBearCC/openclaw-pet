@@ -26,6 +26,9 @@ import { FileDropHandler } from './interaction/FileDropHandler.js';
 import { ToolStatusBar } from './ui/ToolStatusBar.js';
 import { MiniCatSystem } from './pet/MiniCatSystem.js';
 import { SkillPanel } from './ui/SkillPanel.js';
+import { WorkspaceWatcher } from './pet/WorkspaceWatcher.js';
+import { SkillUnlockSystem } from './pet/SkillUnlockSystem.js';
+import { AgentConnections } from './ui/AgentConnections.js';
 
 class OpenClawPet {
   constructor() {
@@ -52,6 +55,9 @@ class OpenClawPet {
     this.toolStatusBar = null;
     this.miniCatSystem = null;
     this.skillPanel = null;
+    this.workspaceWatcher = null;
+    this.skillUnlockSystem = null;
+    this.agentConnections = null;
 
     this._lastTime = 0;
     this._running = false;
@@ -163,8 +169,48 @@ class OpenClawPet {
     );
     this.miniCatSystem.start();
 
-    // 6h. 技能图鉴
-    this.skillPanel = new SkillPanel(this.electronAPI);
+    // 6h. 技能解锁成就系统
+    this.skillUnlockSystem = new SkillUnlockSystem();
+    this.skillUnlockSystem.onUnlock(({ toolName, stars, isNew }) => {
+      const gain = isNew ? 5 : stars === 3 ? 15 : 8;
+      this.intimacySystem.gain(gain);
+      const msgs = isNew
+        ? [`解锁了新技能：${toolName}！✨`, `喵！${toolName} 好厉害！`]
+        : [`${toolName} 越用越熟练了！${'★'.repeat(stars)}`, `${toolName} 升星啦！喵～`];
+      this.bubble.show(msgs[Math.floor(Math.random() * msgs.length)], 3000);
+      this.stateMachine.transition('happy', { force: true, duration: 1200 });
+    });
+
+    // 6h2. 技能图鉴（注入解锁系统）
+    this.skillPanel = new SkillPanel(this.electronAPI, this.skillUnlockSystem);
+
+    // 6i. 多 Agent 协作可视化
+    this.agentConnections = new AgentConnections(
+      document.getElementById('pet-area'),
+      this.miniCatSystem
+    );
+
+    // 6j. 工作区感知
+    this.workspaceWatcher = new WorkspaceWatcher();
+    this.workspaceWatcher.onChange((info) => {
+      if (this.bubble.isVisible() || this.chatPanel.isOpen) return;
+      const { category, project, file } = info;
+      if (category === 'code_editor' && project) {
+        if (Math.random() > 0.3) return;
+        const msgs = [
+          `在写 ${project} 呢~ 需要帮忙吗？💻`,
+          `${project} 进展顺利吗？我看着呢~`,
+          `${file ? file + ' ' : ''}写代码好厉害！`,
+        ];
+        this.bubble.show(msgs[Math.floor(Math.random() * msgs.length)], 4000);
+        this.stateMachine.transition('idle2', { force: true, duration: 2000 });
+        return;
+      }
+      if (category === 'terminal' && project) {
+        if (Math.random() > 0.2) return;
+        this.bubble.show(`在 ${project} 跑命令~ 加油！⌨️`, 3000);
+      }
+    });
 
     // 7. 交互处理器
     this.dragHandler = new DragHandler(
@@ -427,6 +473,9 @@ class OpenClawPet {
       this._lastAppReaction = Date.now();
       this.bubble.show(pool[Math.floor(Math.random() * pool.length)], 4000);
       this.stateMachine.transition('idle2', { force: true, duration: 2000 });
+
+      // 工作区感知（精准项目/文件信息）
+      this.workspaceWatcher?.handleAppChange(data);
     });
 
     // 窗口停靠开关
@@ -469,11 +518,12 @@ class OpenClawPet {
       // 1. 分发给小分身系统
       this.miniCatSystem?.onAgentEvent(event);
 
-      // 2. 工具调用 → 头顶状态条
+      // 2. 工具调用 → 头顶状态条 + 技能解锁
       if (event.stream === 'tool') {
         const toolName = event.data?.tool || event.data?.name || 'working';
         if (event.data?.phase === 'start' || event.data?.status === 'running') {
           this.toolStatusBar.show(toolName);
+          this.skillUnlockSystem?.record(toolName);
         } else if (event.data?.phase === 'complete' || event.data?.phase === 'error') {
           this.toolStatusBar.hide();
         }
@@ -560,6 +610,9 @@ class OpenClawPet {
     this.toolStatusBar?.destroy();
     this.miniCatSystem?.destroy();
     this.skillPanel?.destroy();
+    this.agentConnections?.destroy();
+    this.workspaceWatcher = null;
+    this.skillUnlockSystem = null;
     this.bubble?.destroy();
     this.chatPanel?.destroy();
     this.settingsPanel?.destroy();

@@ -258,6 +258,16 @@ export class ChatPanel {
     else this.open();
   }
 
+  /**
+   * 以编程方式发送消息（供文件拖拽分析等外部调用）
+   * @param {string} text
+   */
+  sendMessage(text) {
+    if (!this.isOpen) this.open();
+    this.inputEl.value = text;
+    this._send();
+  }
+
   destroy() {
     if (this.element?.parentNode) {
       this.element.parentNode.removeChild(this.element);

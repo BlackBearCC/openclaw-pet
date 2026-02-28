@@ -77,7 +77,8 @@ export class MiniCatSystem {
     if (!cat) return;
 
     if (stream === 'tool') {
-      cat.setBusy(true);
+      const toolName = event.data?.tool || event.data?.name;
+      cat.setBusy(true, toolName);
     } else if (stream === 'lifecycle' && event.data?.phase === 'complete') {
       cat.setBusy(false);
     }
@@ -105,6 +106,7 @@ class MiniCat {
     this.session = session;
     this.slotIndex = slotIndex;
     this._busy = false;
+    this._currentTool = null;
     this._frame = 0;
     this._frameAcc = 0;
     this._animId = null;
@@ -156,7 +158,11 @@ class MiniCat {
     return css;
   }
 
-  setBusy(busy) { this._busy = busy; }
+  setBusy(busy, toolName) {
+    this._busy = busy;
+    if (toolName) this._currentTool = toolName;
+    else if (!busy) this._currentTool = null;
+  }
 
   _startAnimation() {
     let last = performance.now();

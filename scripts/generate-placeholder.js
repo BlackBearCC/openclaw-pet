@@ -21,6 +21,34 @@ const path = require('path');
 const zlib = require('zlib');
 
 const FRAME_SIZE = 128;
+
+// ===== 幼猫模板 (32x24) — 大圆头、2x2大眼、短圆身体 =====
+// 1=body, 2=ear, 3=eye, 4=nose, 5=mouth, 6=tail, 7=paw
+const CAT_KITTEN = [
+  '00000000000000000000000000000000',
+  '00000022200000000000002220000000',
+  '00000222200000000000002222000000',
+  '00002222110000000000011222200000',
+  '00022211110000000000011112200000',
+  '00222111111111111111111111220000',
+  '00211111111111111111111111120000',
+  '00111111111111111111111111110000',
+  '00111111333111111133311111110000',
+  '00111111333111111133311111110000',
+  '00111111111111411111111111110000',
+  '00111111111115511111111111110000',
+  '00011111111111111111111111100000',
+  '00001111111111111111111111000000',
+  '00000111111111111111111110000000',
+  '00000011111111111111111100000000',
+  '00000011111111111111111100000000',
+  '00000011111111111111111100000000',
+  '00000071111111111111111700000000',
+  '00000077000000000000770000000000',
+  '00000077000000000000770000000000',
+  '00000000000000000000000000000000',
+];
+
 const ANIMATIONS = {
   idle:        { frames: 8, row: 0 },
   walk:        { frames: 8, row: 1 },
@@ -363,7 +391,12 @@ function crc32(buf) {
 
 // ===== Main Generation =====
 
-function generate() {
+/**
+ * 生成一套 spritesheet
+ * @param {string[][]} template - 像素模板
+ * @param {string} outSuffix - 文件名后缀，''=标准, '-kitten'=幼猫
+ */
+function generate(template, outSuffix) {
   const totalWidth = COLS * FRAME_SIZE;
   const totalHeight = ROWS * FRAME_SIZE;
 
@@ -373,7 +406,7 @@ function generate() {
     data: new Uint8Array(totalWidth * totalHeight * 4) // all zeros = transparent
   };
 
-  const catPixels = parseCatTemplate(CAT_BASE);
+  const catPixels = parseCatTemplate(template);
   const spritesheetMeta = {
     frameSize: FRAME_SIZE,
     animations: {}
@@ -409,18 +442,24 @@ function generate() {
   const outDir = path.join(__dirname, '..', 'assets', 'sprites', 'placeholder');
   fs.mkdirSync(outDir, { recursive: true });
 
+  const pngName = `spritesheet${outSuffix}.png`;
+  const jsonName = `spritesheet${outSuffix}.json`;
+
   const pngBuffer = createPNG(totalWidth, totalHeight, imageData.data);
-  fs.writeFileSync(path.join(outDir, 'spritesheet.png'), pngBuffer);
+  fs.writeFileSync(path.join(outDir, pngName), pngBuffer);
 
   // Write JSON metadata
   fs.writeFileSync(
-    path.join(outDir, 'spritesheet.json'),
+    path.join(outDir, jsonName),
     JSON.stringify(spritesheetMeta, null, 2)
   );
 
-  console.log(`✅ Generated spritesheet: ${totalWidth}x${totalHeight}px`);
+  console.log(`✅ Generated ${pngName}: ${totalWidth}x${totalHeight}px`);
   console.log(`   Animations: ${Object.keys(ANIMATIONS).join(', ')}`);
   console.log(`   Output: ${outDir}/`);
 }
 
-generate();
+// 生成标准成年猫
+generate(CAT_BASE, '');
+// 生成幼猫
+generate(CAT_KITTEN, '-kitten');

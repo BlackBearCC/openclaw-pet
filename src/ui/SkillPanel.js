@@ -9,8 +9,9 @@
  */
 
 export class SkillPanel {
-  constructor(electronAPI) {
+  constructor(electronAPI, unlockSystem = null) {
     this.electronAPI = electronAPI;
+    this.unlockSystem = unlockSystem;
     this.isOpen = false;
     this._tools = [];
     this._createDOM();
@@ -33,7 +34,6 @@ export class SkillPanel {
   }
 
   async open() {
-    if (this.isOpen) return;
     this.isOpen = true;
     this.element.classList.add('open');
     this.electronAPI?.expandWindow(true);
@@ -86,17 +86,24 @@ export class SkillPanel {
   }
 
   _renderCard(t) {
-    const desc = t.description
-      ? this._escapeHtml(t.description.slice(0, 60))
-      : '\u2014';
+    const stars = this.unlockSystem?.getStars(t.name) || 0;
+    const locked = !!this.unlockSystem && stars === 0;
+    const starStr = '\u2605'.repeat(stars) + '\u2606'.repeat(3 - stars);
+    const desc = t.description ? this._escapeHtml(t.description.slice(0, 60)) : '\u2014';
     const name = this._escapeHtml(t.name);
     const pluginTag = t.pluginId
       ? `<span class="skill-tag plugin">${this._escapeHtml(t.pluginId)}</span>`
       : '';
+    const count = this.unlockSystem?.getData()[t.name]?.count || 0;
+
     return `
-      <div class="skill-card" title="${this._escapeHtml(t.description || '')}">
+      <div class="skill-card ${locked ? 'skill-locked' : ''}" title="${this._escapeHtml(t.description || '')}">
         <div class="skill-card-name">${name}</div>
-        <div class="skill-card-desc">${desc}</div>
+        ${locked
+          ? '<div class="skill-card-locked-label">\uD83D\uDD12 尚未使用</div>'
+          : `<div class="skill-card-stars" title="使用次数：${count}">${starStr}</div>
+             <div class="skill-card-desc">${desc}</div>`
+        }
         ${pluginTag}
       </div>
     `;

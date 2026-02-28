@@ -608,6 +608,51 @@ html, body {
   padding: 40px 0;
 }
 
+/* ===== Agent 协作连线 ===== */
+.agent-connections-svg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 11;
+}
+.agent-line.idle {
+  stroke: rgba(120,120,140,0.25);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+.agent-line.busy {
+  stroke: rgba(255,160,50,0.65);
+  stroke-width: 1.5;
+}
+.agent-badge {
+  font-size: 10px;
+  background: rgba(50,50,60,0.82);
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+/* ===== 技能图鉴星级/锁定 ===== */
+.skill-card.skill-locked {
+  background: #f0f0f0;
+  opacity: 0.55;
+}
+.skill-card-locked-label {
+  font-size: 11px;
+  color: #aaa;
+  margin-top: 2px;
+}
+.skill-card-stars {
+  font-size: 11px;
+  color: #f5a623;
+  margin-top: 2px;
+  letter-spacing: 1px;
+}
+
 /* ===== 动画 ===== */
 @keyframes petAppear {
   from { opacity: 0; transform: scale(0.5) translateY(20px); }

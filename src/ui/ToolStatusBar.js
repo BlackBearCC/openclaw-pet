@@ -6,7 +6,7 @@
  * 比 Canvas overlay 更适合文字渲染（支持 CSS 动画、emoji 图标）。
  */
 
-const ICON_MAP = {
+export const ICON_MAP = {
   browser: '🔍', web_search: '🔍', fetch: '🌐',
   exec: '⚡', shell: '⚡', terminal: '⚡',
   pdf: '📄', read_file: '📄', read: '📄',
