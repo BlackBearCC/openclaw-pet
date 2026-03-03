@@ -47,6 +47,11 @@ export class SkillPanel {
     this.electronAPI?.expandWindow(false);
   }
 
+  toggle() {
+    if (this.isOpen) this.close();
+    else this.open();
+  }
+
   async _loadTools() {
     const body = this.element.querySelector('.skill-body');
     try {

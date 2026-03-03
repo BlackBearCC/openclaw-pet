@@ -40,11 +40,13 @@ class OpenClawPet {
     this.kittenSheet = new SpriteSheet();
     this.stateMachine = new StateMachine();
     this.moodSystem = new MoodSystem();
+    this.intimacySystem = new IntimacySystem();
     this.renderer = null;
     this.behaviors = null;
     this.bubble = null;
     this.chatPanel = null;
     this.settingsPanel = null;
+    this.skillPanel = null;
 
     this.feedingAnimator = null;
     this.dragHandler = null;
@@ -122,6 +124,7 @@ class OpenClawPet {
     this.bubble = new Bubble(this.bubbleContainer);
     this.chatPanel = new ChatPanel(this.electronAPI, this.stateMachine, this.bubble);
     this.settingsPanel = new SettingsPanel(this.electronAPI);
+    this.skillPanel = new SkillPanel(this.electronAPI, this.intimacySystem);
 
     // 6b. 文件拖拽分析（需在 bubble/chatPanel 初始化之后）
     this.fileDropHandler = new FileDropHandler(
@@ -230,6 +233,7 @@ class OpenClawPet {
         },
         onDoubleClick: () => {
           if (this.settingsPanel.isOpen) this.settingsPanel.close();
+          if (this.skillPanel.isOpen) this.skillPanel.close();
           this.chatPanel.toggle();
         },
         onLongPress: () => {
@@ -264,7 +268,13 @@ class OpenClawPet {
       }
     });
 
-    // 9. 监听主进程事件
+    // 9. 亲密度里程碑
+    this.intimacySystem.onMilestone((stage, info) => {
+      this.bubble.show(info.milestoneMsg, 5000);
+      this.stateMachine.transition('happy', { force: true, duration: 3000 });
+    });
+
+    // 10. 监听主进程事件
     this._setupMainProcessEvents();
 
     // 10. 启动
@@ -405,13 +415,22 @@ class OpenClawPet {
     // 右键菜单 → 打开聊天
     this.electronAPI.onToggleChat(() => {
       if (this.settingsPanel.isOpen) this.settingsPanel.close();
+      if (this.skillPanel.isOpen) this.skillPanel.close();
       this.chatPanel.toggle();
     });
 
     // 右键菜单 → 打开设置
     this.electronAPI.onOpenSettings(() => {
       if (this.chatPanel.isOpen) this.chatPanel.close();
+      if (this.skillPanel.isOpen) this.skillPanel.close();
       this.settingsPanel.open();
+    });
+
+    // 右键菜单 → 打开技能面板
+    this.electronAPI.onOpenSkills?.(() => {
+      if (this.chatPanel.isOpen) this.chatPanel.close();
+      if (this.settingsPanel.isOpen) this.settingsPanel.close();
+      this.skillPanel.toggle();
     });
 
     // 右键菜单 → 调整大小
@@ -616,6 +635,7 @@ class OpenClawPet {
     this.bubble?.destroy();
     this.chatPanel?.destroy();
     this.settingsPanel?.destroy();
+    this.skillPanel?.destroy();
   }
 }
 

@@ -60,6 +60,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // === 监听主进程事件 ===
   onToggleChat: (callback) => ipcRenderer.on('toggle-chat', () => callback()),
   onOpenSettings: (callback) => ipcRenderer.on('open-settings', () => callback()),
+  onOpenSkills: (callback) => ipcRenderer.on('open-skills', () => callback()),
   onResizePet: (callback) => ipcRenderer.on('resize-pet', (e, size) => callback(size)),
   onChatCleared: (callback) => ipcRenderer.on('chat-cleared', () => callback()),
   onGatewayStatus: (callback) => ipcRenderer.on('gateway-status', (e, status) => callback(status)),
