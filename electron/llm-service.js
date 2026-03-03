@@ -527,6 +527,24 @@ class LLMService {
     });
   }
 
+  async agentsList() {
+    if (!this.wsConnected) return { agents: [] };
+    try {
+      return await this._sendRequest('agents.list', {});
+    } catch {
+      return { agents: [] };
+    }
+  }
+
+  async agentGet(agentId) {
+    if (!this.wsConnected) return null;
+    try {
+      return await this._sendRequest('agent.get', { agentId: agentId || this.config.agentId });
+    } catch {
+      return null;
+    }
+  }
+
   // ===== Legacy sync chat (fallback) =====
 
   async chat(userMessage) {

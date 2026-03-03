@@ -40,6 +40,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // === 模型和工具 ===
   modelsList: () => ipcRenderer.invoke('models-list'),
   toolsCatalog: (agentId) => ipcRenderer.invoke('tools-catalog', agentId),
+  agentsList: () => ipcRenderer.invoke('agents-list'),
+  agentGet: (agentId) => ipcRenderer.invoke('agent-get', agentId),
 
   // === 配置 ===
   getConfig: () => ipcRenderer.invoke('get-config'),

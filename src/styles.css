@@ -718,6 +718,31 @@ html, body {
 .skill-close:hover {
   background: rgba(255,255,255,0.2);
 }
+/* 图鉴标签页 */
+.almanac-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 0 8px;
+  flex-shrink: 0;
+}
+.almanac-tab {
+  flex: 1;
+  padding: 8px 4px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 12px;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.almanac-tab:hover { color: #555; }
+.almanac-tab.active {
+  color: #43b37a;
+  border-bottom-color: #43b37a;
+  font-weight: 600;
+}
 .skill-body {
   padding: 14px;
   overflow-y: auto;
@@ -831,6 +856,128 @@ html, body {
   margin-top: 2px;
   letter-spacing: 1px;
 }
+/* 分身图鉴 */
+.agent-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+  font-size: 11px;
+}
+.agent-status {
+  font-size: 10px;
+}
+.agent-status.active { color: #43b37a; }
+.agent-status.inactive { color: #bbb; }
+.agent-time {
+  color: #aaa;
+  font-size: 10px;
+}
+.agent-inactive {
+  opacity: 0.6;
+}
+
+/* ===== SVG 任务标签 ===== */
+.agent-task-label {
+  font-size: 8px;
+  fill: rgba(255, 160, 50, 0.9);
+  pointer-events: none;
+  filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));
+}
+
+/* ===== Mini-cat 庆祝光效 ===== */
+.mini-cat.happy .mini-cat-canvas {
+  filter: brightness(1.15) saturate(1.2);
+  animation: miniCatHappyPulse 0.5s ease-in-out infinite alternate;
+}
+
+/* ===== 成就卡片 ===== */
+.achievement-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.achievement-card {
+  background: #f8f8f8;
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.achievement-card.unlocked {
+  background: linear-gradient(135deg, #fff9e6, #fff3cc);
+  border: 1px solid #f5c842;
+}
+.achievement-card.locked {
+  opacity: 0.45;
+  filter: grayscale(0.8);
+}
+.achievement-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  width: 28px;
+  text-align: center;
+}
+.achievement-info {
+  flex: 1;
+  min-width: 0;
+}
+.achievement-name {
+  font-weight: 600;
+  font-size: 12px;
+  color: #333;
+}
+.achievement-desc {
+  font-size: 11px;
+  color: #888;
+  margin-top: 1px;
+}
+.achievement-date {
+  font-size: 10px;
+  color: #bbb;
+  margin-top: 2px;
+}
+.achievement-bonus {
+  font-size: 10px;
+  color: #f5a623;
+}
+
+/* ===== Agent 战绩徽章 ===== */
+.agent-stats-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.agent-stat-badge {
+  font-size: 9px;
+  background: #e8f5e9;
+  color: #2e7d32;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.agent-stat-badge.tools {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+.agent-stat-badge.duration {
+  background: #f3e5f5;
+  color: #6a1b9a;
+}
+.agent-unique-tools {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  margin-top: 3px;
+}
+.agent-tool-chip {
+  font-size: 9px;
+  background: #f0f0f0;
+  border-radius: 3px;
+  padding: 1px 4px;
+  color: #666;
+}
 
 /* ===== 动画 ===== */
 @keyframes petAppear {
@@ -845,4 +992,9 @@ html, body {
 @keyframes msgIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes miniCatHappyPulse {
+  from { transform: translateY(0) scale(1); }
+  to { transform: translateY(-3px) scale(1.05); }
 }

@@ -29,6 +29,8 @@ import { SkillPanel } from './ui/SkillPanel.js';
 import { WorkspaceWatcher } from './pet/WorkspaceWatcher.js';
 import { SkillUnlockSystem } from './pet/SkillUnlockSystem.js';
 import { AgentConnections } from './ui/AgentConnections.js';
+import { AgentStatsTracker } from './pet/AgentStatsTracker.js';
+import { AchievementSystem } from './pet/AchievementSystem.js';
 
 class OpenClawPet {
   constructor() {
@@ -40,13 +42,11 @@ class OpenClawPet {
     this.kittenSheet = new SpriteSheet();
     this.stateMachine = new StateMachine();
     this.moodSystem = new MoodSystem();
-    this.intimacySystem = new IntimacySystem();
     this.renderer = null;
     this.behaviors = null;
     this.bubble = null;
     this.chatPanel = null;
     this.settingsPanel = null;
-    this.skillPanel = null;
 
     this.feedingAnimator = null;
     this.dragHandler = null;
@@ -60,8 +60,11 @@ class OpenClawPet {
     this.workspaceWatcher = null;
     this.skillUnlockSystem = null;
     this.agentConnections = null;
+    this.agentStatsTracker = null;
+    this.achievementSystem = null;
 
     this._lastTime = 0;
+    this._chatCompletionCount = 0;
     this._running = false;
     this._proactiveTimer = null;
     this._pendingClipboard = null; // 待处理的剪贴板内容
@@ -124,20 +127,12 @@ class OpenClawPet {
     this.bubble = new Bubble(this.bubbleContainer);
     this.chatPanel = new ChatPanel(this.electronAPI, this.stateMachine, this.bubble);
     this.settingsPanel = new SettingsPanel(this.electronAPI);
-    this.skillPanel = new SkillPanel(this.electronAPI, this.intimacySystem);
 
     // 6b. 文件拖拽分析（需在 bubble/chatPanel 初始化之后）
     this.fileDropHandler = new FileDropHandler(
       this.canvas, this.electronAPI, this.stateMachine, this.bubble,
       this.chatPanel, this.intimacySystem
     );
-
-    // 6c. 里程碑回调（bubble 已初始化，可安全引用）
-    this.intimacySystem.onMilestone((stage, info) => {
-      this.bubble.show(info.milestoneMsg, 4000);
-      this.stateMachine.transition('happy', { force: true, duration: 2000 });
-      this.renderer.setGrowthStage(stage);
-    });
 
     // 6d. 边缘反应
     this.behaviors.onEdgeReaction((edge) => {
@@ -182,16 +177,39 @@ class OpenClawPet {
         : [`${toolName} 越用越熟练了！${'★'.repeat(stars)}`, `${toolName} 升星啦！喵～`];
       this.bubble.show(msgs[Math.floor(Math.random() * msgs.length)], 3000);
       this.stateMachine.transition('happy', { force: true, duration: 1200 });
+      this.achievementSystem?.check();
     });
 
-    // 6h2. 技能图鉴（注入解锁系统）
-    this.skillPanel = new SkillPanel(this.electronAPI, this.skillUnlockSystem);
+    // 6h2. Agent 战绩追踪
+    this.agentStatsTracker = new AgentStatsTracker();
+
+    // 6h3. 成就系统
+    this.achievementSystem = new AchievementSystem(this.skillUnlockSystem, this.intimacySystem);
+    this.achievementSystem.onUnlock((ach) => {
+      this.bubble.show(`🏆 成就解锁：${ach.name}！${ach.icon}`, 4000);
+      this.stateMachine.transition('happy', { force: true, duration: 1500 });
+      if (ach.intimacyBonus > 0) this.intimacySystem.gain(ach.intimacyBonus);
+    });
+    this.achievementSystem.setContext({
+      miniCatSystem: this.miniCatSystem,
+      agentStatsTracker: this.agentStatsTracker,
+    });
+
+    // 6h4. 技能图鉴（注入所有子系统）
+    this.skillPanel = new SkillPanel(
+      this.electronAPI, this.skillUnlockSystem,
+      this.agentStatsTracker, this.achievementSystem
+    );
 
     // 6i. 多 Agent 协作可视化
     this.agentConnections = new AgentConnections(
       document.getElementById('pet-area'),
-      this.miniCatSystem
+      this.miniCatSystem,
+      this.agentStatsTracker
     );
+
+    // 恢复 chat 计数
+    this._chatCompletionCount = parseInt(localStorage.getItem('pet-chat-count') || '0');
 
     // 6j. 工作区感知
     this.workspaceWatcher = new WorkspaceWatcher();
@@ -272,6 +290,7 @@ class OpenClawPet {
     this.intimacySystem.onMilestone((stage, info) => {
       this.bubble.show(info.milestoneMsg, 5000);
       this.stateMachine.transition('happy', { force: true, duration: 3000 });
+      this.renderer.setGrowthStage(stage);
     });
 
     // 10. 监听主进程事件
@@ -445,10 +464,13 @@ class OpenClawPet {
       this.bubble.show('对话已清空~ 重新开始吧！', 2000);
     });
 
-    // AI 聊天回复完成 → 亲密度 +3
+    // AI 聊天回复完成 → 亲密度 +3 + 成就检查
     this.electronAPI.onChatStream?.((payload) => {
       if (payload?.state === 'final') {
         this.intimacySystem.gain(3);
+        this._chatCompletionCount++;
+        localStorage.setItem('pet-chat-count', String(this._chatCompletionCount));
+        this.achievementSystem?.check();
       }
     });
 
@@ -525,30 +547,31 @@ class OpenClawPet {
       this.behaviors.setPosition(petX, petY);
     });
 
-    // 技能图鉴打开
-    this.electronAPI.onOpenSkills?.(() => {
-      if (this.chatPanel.isOpen) this.chatPanel.close();
-      if (this.settingsPanel.isOpen) this.settingsPanel.close();
-      this.skillPanel.open();
-    });
-
     // Agent 事件分发 — 状态条 + 小分身 + 活动状态映射
     this.electronAPI.onAgentEvent?.((event) => {
       // 1. 分发给小分身系统
       this.miniCatSystem?.onAgentEvent(event);
 
-      // 2. 工具调用 → 头顶状态条 + 技能解锁
+      // 2. 工具调用 → 头顶状态条 + 技能解锁 + Agent 战绩
       if (event.stream === 'tool') {
         const toolName = event.data?.tool || event.data?.name || 'working';
         if (event.data?.phase === 'start' || event.data?.status === 'running') {
           this.toolStatusBar.show(toolName);
           this.skillUnlockSystem?.record(toolName);
+
+          // 子 session 工具追踪
+          const isSubSession = event.sessionKey && !event.sessionKey.endsWith(':main');
+          if (isSubSession) {
+            const taskName = this.miniCatSystem?.miniCats.get(event.sessionKey)?.session?.derivedTitle || null;
+            this.agentStatsTracker?.recordTool(event.sessionKey, toolName, taskName);
+          }
         } else if (event.data?.phase === 'complete' || event.data?.phase === 'error') {
           this.toolStatusBar.hide();
         }
+        this.achievementSystem?.check();
       }
 
-      // 3. 生命周期 → 宠物动画
+      // 3. 生命周期 → 宠物动画 + Agent 完成追踪
       if (event.stream === 'lifecycle') {
         if (event.data?.phase === 'thinking' || event.data?.phase === 'running') {
           const interruptible = ['idle', 'idle2', 'idle3', 'walk', 'sit', 'sleep'];
@@ -558,6 +581,12 @@ class OpenClawPet {
         } else if (event.data?.phase === 'complete') {
           this.stateMachine.transition('happy', { force: true, duration: 1500 });
           this.bubble.show('任务完成了喵！✨', 2000);
+
+          const isSubSession = event.sessionKey && !event.sessionKey.endsWith(':main');
+          if (isSubSession) {
+            this.agentStatsTracker?.recordComplete(event.sessionKey);
+          }
+          this.achievementSystem?.check();
         }
       }
     });
@@ -632,10 +661,11 @@ class OpenClawPet {
     this.agentConnections?.destroy();
     this.workspaceWatcher = null;
     this.skillUnlockSystem = null;
+    this.agentStatsTracker = null;
+    this.achievementSystem = null;
     this.bubble?.destroy();
     this.chatPanel?.destroy();
     this.settingsPanel?.destroy();
-    this.skillPanel?.destroy();
   }
 }
 

@@ -181,6 +181,14 @@ function createWindow() {
     return await llmService.toolsCatalog(agentId);
   });
 
+  ipcMain.handle('agents-list', async () => {
+    return await llmService.agentsList();
+  });
+
+  ipcMain.handle('agent-get', async (event, agentId) => {
+    return await llmService.agentGet(agentId);
+  });
+
   // ===== IPC: 配置 =====
   ipcMain.handle('get-config', () => {
     return llmService.getConfig();
@@ -223,7 +231,7 @@ function createWindow() {
         click: () => mainWindow.webContents.send('open-settings')
       },
       {
-        label: '🎒 技能图鉴',
+        label: '📖 图鉴',
         click: () => mainWindow.webContents.send('open-skills')
       },
       { type: 'separator' },

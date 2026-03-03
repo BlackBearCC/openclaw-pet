@@ -30,8 +30,9 @@ const SLOT_CENTERS = [
 const NS = 'http://www.w3.org/2000/svg';
 
 export class AgentConnections {
-  constructor(petArea, miniCatSystem) {
+  constructor(petArea, miniCatSystem, agentStatsTracker = null) {
     this.miniCatSystem = miniCatSystem;
+    this.agentStatsTracker = agentStatsTracker;
     this._timer = null;
 
     this.svg = document.createElementNS(NS, 'svg');
@@ -88,6 +89,21 @@ export class AgentConnections {
           div.textContent = icon;
           fo.appendChild(div);
           this.svg.appendChild(fo);
+        }
+
+        // 任务名标签
+        const entry = this.agentStatsTracker?.get(cat.session?.key);
+        const taskName = entry?.taskName || cat.session?.derivedTitle || '';
+        if (taskName) {
+          const mx = Math.round((MAIN[0] + cx) / 2);
+          const my = Math.round((MAIN[1] + cy) / 2) - 6;
+          const label = document.createElementNS(NS, 'text');
+          label.setAttribute('x', String(mx));
+          label.setAttribute('y', String(my));
+          label.setAttribute('class', 'agent-task-label');
+          label.setAttribute('text-anchor', 'middle');
+          label.textContent = taskName.length > 12 ? taskName.slice(0, 11) + '\u2026' : taskName;
+          this.svg.appendChild(label);
         }
       }
     }

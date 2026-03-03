@@ -81,6 +81,7 @@ export class MiniCatSystem {
       cat.setBusy(true, toolName);
     } else if (stream === 'lifecycle' && event.data?.phase === 'complete') {
       cat.setBusy(false);
+      cat.setHappy(2000);
     }
   }
 
@@ -106,6 +107,8 @@ class MiniCat {
     this.session = session;
     this.slotIndex = slotIndex;
     this._busy = false;
+    this._happy = false;
+    this._happyTimeout = null;
     this._currentTool = null;
     this._frame = 0;
     this._frameAcc = 0;
@@ -164,6 +167,16 @@ class MiniCat {
     else if (!busy) this._currentTool = null;
   }
 
+  setHappy(durationMs = 2000) {
+    this._happy = true;
+    this.container.classList.add('happy');
+    clearTimeout(this._happyTimeout);
+    this._happyTimeout = setTimeout(() => {
+      this._happy = false;
+      this.container.classList.remove('happy');
+    }, durationMs);
+  }
+
   _startAnimation() {
     let last = performance.now();
     const loop = (now) => {
@@ -171,7 +184,7 @@ class MiniCat {
       const dt = now - last;
       last = now;
       this._frameAcc += dt;
-      const fps = this._busy ? 8 : 4;
+      const fps = this._happy ? 8 : this._busy ? 8 : 4;
       if (this._frameAcc > 1000 / fps) {
         this._frameAcc = 0;
         this._frame++;
@@ -179,7 +192,7 @@ class MiniCat {
 
       // 绘制
       this.ctx.clearRect(0, 0, 48, 48);
-      const animName = this._busy ? 'walk' : 'idle';
+      const animName = this._happy ? 'happy' : this._busy ? 'walk' : 'idle';
       const anim = this.spriteSheet.getAnimation(animName);
       if (anim) {
         const frameIdx = this._frame % anim.frames.length;
