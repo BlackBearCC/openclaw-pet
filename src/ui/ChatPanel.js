@@ -2,7 +2,7 @@
  * ChatPanel.js
  * 迷你聊天面板 — 双击宠物弹出，直接和 AI 对话
  *
- * 支持流式回复显示（通过 WebSocket RPC chat 事件）
+ * 支持：流式回复 · 时间戳 · 复制按钮 · Markdown 渲染 · 滚动到底部按钮
  */
 
 export class ChatPanel {
@@ -26,6 +26,9 @@ export class ChatPanel {
     this.activeTypingId = null;
     this.streamedText = '';
 
+    // 消息 raw text 映射（供复制用）
+    this._rawTextMap = {};
+
     this._createDOM();
     this._setupStreamListener();
   }
@@ -35,13 +38,15 @@ export class ChatPanel {
     this.element.id = 'chat-panel';
     this.element.innerHTML = `
       <div class="chat-header">
-        <span class="chat-title">OpenClaw Chat</span>
+        <span class="chat-title">🐾 OpenClaw Chat</span>
         <div class="chat-header-actions">
           <button class="chat-abort" title="中止回复" style="display:none">■</button>
           <button class="chat-close" title="关闭">✕</button>
         </div>
       </div>
-      <div class="chat-messages"></div>
+      <div class="chat-messages">
+        <button class="scroll-to-bottom" title="滚动到底部">↓</button>
+      </div>
       <div class="chat-input-area">
         <input type="text" class="chat-input" placeholder="跟我说点什么喵~" />
         <button class="chat-send" title="发送">➤</button>
@@ -52,6 +57,7 @@ export class ChatPanel {
     this.inputEl = this.element.querySelector('.chat-input');
     this.sendBtn = this.element.querySelector('.chat-send');
     this.abortBtn = this.element.querySelector('.chat-abort');
+    this.scrollBtn = this.element.querySelector('.scroll-to-bottom');
     const closeBtn = this.element.querySelector('.chat-close');
 
     this.sendBtn.addEventListener('click', () => this._send());
@@ -64,6 +70,14 @@ export class ChatPanel {
 
     this.abortBtn.addEventListener('click', () => this._abort());
     closeBtn.addEventListener('click', () => this.close());
+
+    // 滚动到底部按钮
+    this.scrollBtn.addEventListener('click', () => {
+      this._scrollToBottom(true);
+    });
+
+    // 监听滚动，控制按钮显隐
+    this.messagesEl.addEventListener('scroll', () => this._onScroll());
 
     document.body.appendChild(this.element);
   }
@@ -84,25 +98,27 @@ export class ChatPanel {
         const text = this._extractText(payload.message);
         if (text) {
           this.streamedText = text;
-          this._replaceMessage(this.activeTypingId, text);
+          // 流式中间状态用 plain text
+          this._replaceMessage(this.activeTypingId, text, false);
           this.sm.transition('talk', { force: true, duration: 500 });
         }
       }
 
       if (payload.state === 'final') {
         const finalText = this._extractText(payload.message) || this.streamedText || '喵？';
-        this._replaceMessage(this.activeTypingId, finalText);
+        // final 时切换为 markdown
+        this._replaceMessage(this.activeTypingId, finalText, true);
         this._finishSending(finalText);
       }
 
       if (payload.state === 'error') {
         const errMsg = payload.errorMessage || '出错了喵~';
-        this._replaceMessage(this.activeTypingId, errMsg);
+        this._replaceMessage(this.activeTypingId, errMsg, true);
         this._finishSending(errMsg, 'negative');
       }
 
       if (payload.state === 'aborted') {
-        this._replaceMessage(this.activeTypingId, '（已中止）');
+        this._replaceMessage(this.activeTypingId, '（已中止）', false);
         this._finishSending('（已中止）', 'neutral');
       }
     });
@@ -121,7 +137,7 @@ export class ChatPanel {
     this.sm.transition('talk', { force: true, duration: 2000 });
 
     // 显示打字指示
-    this.activeTypingId = this._addMessage('assistant', '...');
+    this.activeTypingId = this._addMessage('assistant', '...', false);
     this.streamedText = '';
 
     // 尝试使用流式聊天，fallback 到旧接口
@@ -131,7 +147,6 @@ export class ChatPanel {
         this.activeRunId = result.runId;
         // 流式事件将通过 _setupStreamListener 处理
       } catch (e) {
-        // 流式发送失败，fallback 到旧接口
         console.warn('Stream send failed, falling back:', e.message);
         await this._sendLegacy(text);
       }
@@ -146,10 +161,10 @@ export class ChatPanel {
   async _sendLegacy(text) {
     try {
       const response = await this.electronAPI.chatWithAI(text);
-      this._replaceMessage(this.activeTypingId, response.text);
+      this._replaceMessage(this.activeTypingId, response.text, true);
       this._finishSending(response.text, response.sentiment);
     } catch (e) {
-      this._replaceMessage(this.activeTypingId, `出错了喵: ${e.message}`);
+      this._replaceMessage(this.activeTypingId, `出错了喵: ${e.message}`, false);
       this._finishSending(null, 'negative');
     }
   }
@@ -165,7 +180,6 @@ export class ChatPanel {
     } else if (sentiment === 'negative') {
       this.sm.transition('sad', { force: true, duration: 1500 });
     } else if (text) {
-      // 自动检测情感
       const s = this._detectSentiment(text);
       if (s === 'positive') this.sm.transition('happy', { force: true, duration: 1500 });
       else if (s === 'negative') this.sm.transition('sad', { force: true, duration: 1500 });
@@ -190,21 +204,96 @@ export class ChatPanel {
     }
   }
 
-  _addMessage(role, text) {
+  /**
+   * 添加消息气泡
+   * @param {string} role - 'user' | 'assistant'
+   * @param {string} text
+   * @param {boolean} [renderMarkdown=true]
+   * @returns {string} id
+   */
+  _addMessage(role, text, renderMarkdown = true) {
     const id = 'msg-' + Date.now() + Math.random().toString(36).slice(2, 6);
+    this._rawTextMap[id] = text;
+
     const div = document.createElement('div');
     div.className = `chat-msg chat-msg-${role}`;
     div.id = id;
-    div.textContent = text;
-    this.messagesEl.appendChild(div);
-    this.messagesEl.scrollTop = this.messagesEl.scrollHeight;
+
+    // 复制按钮
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'msg-copy-btn';
+    copyBtn.title = '复制';
+    copyBtn.textContent = '⎘';
+    copyBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const raw = this._rawTextMap[id] || text;
+      navigator.clipboard.writeText(raw).then(() => {
+        copyBtn.textContent = '✓';
+        setTimeout(() => { copyBtn.textContent = '⎘'; }, 1500);
+      });
+    });
+
+    // 内容区
+    const contentEl = document.createElement('div');
+    contentEl.className = 'msg-content';
+    if (renderMarkdown && role === 'assistant') {
+      contentEl.innerHTML = this._renderMarkdown(text);
+      contentEl.classList.add('markdown-body');
+    } else {
+      contentEl.textContent = text;
+    }
+
+    // 时间戳
+    const timeEl = document.createElement('span');
+    timeEl.className = 'msg-time';
+    timeEl.textContent = this._formatTime();
+
+    div.appendChild(copyBtn);
+    div.appendChild(contentEl);
+    div.appendChild(timeEl);
+
+    // 插入到 scrollBtn 之前，保持 scrollBtn 在末尾
+    this.messagesEl.insertBefore(div, this.scrollBtn);
+    this._scrollToBottom();
     return id;
   }
 
-  _replaceMessage(id, newText) {
+  /**
+   * 替换消息内容
+   * @param {string} id
+   * @param {string} newText
+   * @param {boolean} [renderMarkdown=false]
+   */
+  _replaceMessage(id, newText, renderMarkdown = false) {
     const el = document.getElementById(id);
-    if (el) el.textContent = newText;
-    this.messagesEl.scrollTop = this.messagesEl.scrollHeight;
+    if (!el) return;
+    this._rawTextMap[id] = newText;
+
+    const contentEl = el.querySelector('.msg-content');
+    if (!contentEl) return;
+
+    if (renderMarkdown) {
+      contentEl.innerHTML = this._renderMarkdown(newText);
+      contentEl.classList.add('markdown-body');
+    } else {
+      contentEl.textContent = newText;
+      contentEl.classList.remove('markdown-body');
+    }
+    this._scrollToBottom();
+  }
+
+  /**
+   * 渲染 Markdown（若 marked.js 可用）
+   */
+  _renderMarkdown(text) {
+    if (window.marked) {
+      try {
+        return window.marked.parse(text);
+      } catch (e) {
+        // fallback to plain text
+      }
+    }
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
   }
 
   /**
@@ -229,6 +318,32 @@ export class ChatPanel {
     if (/[❤️😊🎉✨😄开心高兴棒好赞喜欢]/.test(text)) return 'positive';
     if (/[😢😭💔难过伤心抱歉对不起错误失败呜]/.test(text)) return 'negative';
     return 'neutral';
+  }
+
+  _formatTime() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    return `${h}:${m}`;
+  }
+
+  _scrollToBottom(force = false) {
+    const el = this.messagesEl;
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (force || isNearBottom) {
+      el.scrollTop = el.scrollHeight;
+      this.scrollBtn.classList.remove('visible');
+    }
+  }
+
+  _onScroll() {
+    const el = this.messagesEl;
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distFromBottom > 80) {
+      this.scrollBtn.classList.add('visible');
+    } else {
+      this.scrollBtn.classList.remove('visible');
+    }
   }
 
   open() {
@@ -256,6 +371,15 @@ export class ChatPanel {
   toggle() {
     if (this.isOpen) this.close();
     else this.open();
+  }
+
+  /**
+   * 程序化发送消息（供外部调用，自动打开面板）
+   */
+  sendMessage(text) {
+    this.open();
+    this.inputEl.value = text;
+    setTimeout(() => this._send(), 50);
   }
 
   destroy() {

@@ -20,6 +20,8 @@ import { ContextMenu } from './interaction/ContextMenu.js';
 import { Bubble } from './ui/Bubble.js';
 import { ChatPanel } from './ui/ChatPanel.js';
 import { SettingsPanel } from './ui/SettingsPanel.js';
+import { SkillPanel } from './ui/SkillPanel.js';
+import { IntimacySystem } from './pet/IntimacySystem.js';
 
 class OpenClawPet {
   constructor() {
@@ -30,11 +32,13 @@ class OpenClawPet {
     this.spriteSheet = new SpriteSheet();
     this.stateMachine = new StateMachine();
     this.moodSystem = new MoodSystem();
+    this.intimacySystem = new IntimacySystem();
     this.renderer = null;
     this.behaviors = null;
     this.bubble = null;
     this.chatPanel = null;
     this.settingsPanel = null;
+    this.skillPanel = null;
 
     this.dragHandler = null;
     this.clickHandler = null;
@@ -86,6 +90,7 @@ class OpenClawPet {
     this.bubble = new Bubble(this.bubbleContainer);
     this.chatPanel = new ChatPanel(this.electronAPI, this.stateMachine, this.bubble);
     this.settingsPanel = new SettingsPanel(this.electronAPI);
+    this.skillPanel = new SkillPanel(this.electronAPI, this.intimacySystem);
 
     // 6. 交互处理器
     this.dragHandler = new DragHandler(
@@ -96,6 +101,7 @@ class OpenClawPet {
       this.canvas, this.stateMachine, this.behaviors, {
         onSingleClick: () => {
           this.moodSystem.gain(3);
+          this.intimacySystem.gain(1);
           const level = this.moodSystem.getLevel();
           const greets = level === 'sad'
             ? ['...喵', '(T_T)', '嗯...', '理我一下嘛']
@@ -104,11 +110,13 @@ class OpenClawPet {
         },
         onDoubleClick: () => {
           if (this.settingsPanel.isOpen) this.settingsPanel.close();
+          if (this.skillPanel.isOpen) this.skillPanel.close();
           this.chatPanel.toggle();
         },
         onLongPress: () => {
           // 摸头！
           this.moodSystem.gain(15);
+          this.intimacySystem.gain(5);
           this.behaviors.recordInteraction();
           const purrs = ['咕噜噜~ 😻', '好舒服喵~', '再摸摸！(=^ω^=)', '呼噜呼噜...', '主人真好~ ❤️', '喵呜~'];
           this.bubble.show(purrs[Math.floor(Math.random() * purrs.length)], 3000);
@@ -137,7 +145,13 @@ class OpenClawPet {
       }
     });
 
-    // 9. 监听主进程事件
+    // 9. 亲密度里程碑
+    this.intimacySystem.onMilestone((stage, info) => {
+      this.bubble.show(info.milestoneMsg, 5000);
+      this.stateMachine.transition('happy', { force: true, duration: 3000 });
+    });
+
+    // 10. 监听主进程事件
     this._setupMainProcessEvents();
 
     // 10. 启动
@@ -211,9 +225,11 @@ class OpenClawPet {
       // 1. 鼠标在打开的面板上 → 不穿透
       const chatPanel = document.getElementById('chat-panel');
       const settingsPanel = document.getElementById('settings-panel');
+      const skillPanel = document.getElementById('skill-panel');
       const isOverPanel =
         (chatPanel?.classList.contains('open') && chatPanel.contains(e.target)) ||
-        (settingsPanel?.classList.contains('open') && settingsPanel.contains(e.target));
+        (settingsPanel?.classList.contains('open') && settingsPanel.contains(e.target)) ||
+        (skillPanel?.classList.contains('open') && skillPanel.contains(e.target));
 
       if (isOverPanel) {
         this.electronAPI.setIgnoreMouse(false);
@@ -244,13 +260,22 @@ class OpenClawPet {
     // 右键菜单 → 打开聊天
     this.electronAPI.onToggleChat(() => {
       if (this.settingsPanel.isOpen) this.settingsPanel.close();
+      if (this.skillPanel.isOpen) this.skillPanel.close();
       this.chatPanel.toggle();
     });
 
     // 右键菜单 → 打开设置
     this.electronAPI.onOpenSettings(() => {
       if (this.chatPanel.isOpen) this.chatPanel.close();
+      if (this.skillPanel.isOpen) this.skillPanel.close();
       this.settingsPanel.open();
+    });
+
+    // 右键菜单 → 打开技能面板
+    this.electronAPI.onOpenSkills?.(() => {
+      if (this.chatPanel.isOpen) this.chatPanel.close();
+      if (this.settingsPanel.isOpen) this.settingsPanel.close();
+      this.skillPanel.toggle();
     });
 
     // 右键菜单 → 调整大小
@@ -268,6 +293,7 @@ class OpenClawPet {
     // 喂零食
     this.electronAPI.onFeedPet?.(() => {
       this.moodSystem.gain(20);
+      this.intimacySystem.gain(10);
       this.behaviors.recordInteraction();
       const foods = ['好吃！~ 😋', '喵呜~ 谢谢主人！', '啊好香！还有吗！', '(=^・ω・^=) 满足了~', '最喜欢主人了！❤️'];
       this.bubble.show(foods[Math.floor(Math.random() * foods.length)], 3000);
@@ -333,6 +359,7 @@ class OpenClawPet {
     this.bubble?.destroy();
     this.chatPanel?.destroy();
     this.settingsPanel?.destroy();
+    this.skillPanel?.destroy();
   }
 }
 

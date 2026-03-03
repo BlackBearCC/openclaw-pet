@@ -19,16 +19,18 @@ export class Bubble {
       top: 50px;
       left: 50%;
       transform: translateX(-50%);
-      background: white;
-      border: 2px solid #333;
-      border-radius: 12px;
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.7);
+      border-radius: 14px;
       padding: 8px 12px;
       font-size: 12px;
       font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
       color: #333;
       max-width: 180px;
       word-wrap: break-word;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
       opacity: 0;
       transition: opacity 0.3s ease, transform 0.3s ease;
       pointer-events: none;
@@ -47,7 +49,7 @@ export class Bubble {
       height: 0;
       border-left: 8px solid transparent;
       border-right: 8px solid transparent;
-      border-top: 8px solid #333;
+      border-top: 8px solid rgba(200,200,200,0.5);
     `;
     this.element.appendChild(arrow);
 
@@ -61,7 +63,7 @@ export class Bubble {
       height: 0;
       border-left: 7px solid transparent;
       border-right: 7px solid transparent;
-      border-top: 7px solid white;
+      border-top: 7px solid rgba(255,255,255,0.9);
     `;
     this.element.appendChild(arrowInner);
 

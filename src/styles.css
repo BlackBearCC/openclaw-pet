@@ -1,6 +1,31 @@
 /* =============================================
-   OpenClaw Pet — 单进程桌面宠物助手样式
+   OpenClaw Pet — Glassmorphism · 暖橙主题
    ============================================= */
+
+:root {
+  /* Brand colors */
+  --clr-primary: #FF8C42;
+  --clr-primary-dark: #E67324;
+  --clr-primary-light: #FFB27A;
+  --clr-primary-gradient: linear-gradient(135deg, #FF8C42, #FF6B35);
+  --clr-purple-gradient: linear-gradient(135deg, #8B5CF6, #6D28D9);
+  --clr-green-gradient: linear-gradient(135deg, #34D399, #059669);
+
+  /* Glassmorphism */
+  --glass-bg: rgba(255, 255, 255, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --glass-blur: blur(20px);
+  --glass-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+
+  /* Animation */
+  --transition: 0.25s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
 
 * {
   margin: 0;
@@ -62,6 +87,16 @@ html, body {
   z-index: 20;
 }
 
+/* ===== 面板共用基础 ===== */
+.panel-base {
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--radius-xl);
+}
+
 /* ===== 聊天面板 ===== */
 #chat-panel {
   position: fixed;
@@ -69,9 +104,12 @@ html, body {
   right: 210px;
   width: 0;
   height: 0;
-  background: rgba(255, 255, 255, 0.96);
-  border-radius: 16px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--radius-xl);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -79,12 +117,11 @@ html, body {
   transform: scale(0.8) translateX(20px);
   transition: all 0.25s ease-out;
   pointer-events: none;
-  border: 1px solid rgba(0,0,0,0.08);
 }
 
 #chat-panel.open {
-  width: 280px;
-  height: 400px;
+  width: 300px;
+  height: 420px;
   opacity: 1;
   transform: scale(1) translateX(0);
   pointer-events: all;
@@ -94,12 +131,13 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
-  background: linear-gradient(135deg, #FFB464, #FF9A3C);
+  padding: 12px 14px;
+  background: var(--clr-primary-gradient);
   color: white;
   font-size: 13px;
   font-weight: 600;
   flex-shrink: 0;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
 }
 
 .chat-title {
@@ -127,6 +165,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background var(--transition);
 }
 
 .chat-close:hover,
@@ -148,60 +187,180 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  position: relative;
 }
 
 .chat-messages::-webkit-scrollbar {
-  width: 4px;
+  width: 3px;
 }
 .chat-messages::-webkit-scrollbar-thumb {
-  background: #ddd;
+  background: rgba(255,140,66,0.3);
   border-radius: 2px;
+}
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,140,66,0.6);
+}
+
+/* 滚动到底部按钮 */
+.scroll-to-bottom {
+  position: sticky;
+  bottom: 4px;
+  align-self: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--clr-primary);
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(255,140,66,0.4);
+  opacity: 0;
+  transform: scale(0);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  z-index: 5;
+  flex-shrink: 0;
+}
+
+.scroll-to-bottom.visible {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: all;
 }
 
 .chat-msg {
-  max-width: 85%;
+  max-width: 87%;
   padding: 8px 12px;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   font-size: 13px;
   line-height: 1.5;
   word-wrap: break-word;
   animation: msgIn 0.2s ease-out;
+  position: relative;
 }
 
 .chat-msg-user {
   align-self: flex-end;
-  background: #FFB464;
+  background: var(--clr-primary-gradient);
   color: white;
-  border-bottom-right-radius: 4px;
+  border-bottom-right-radius: var(--radius-sm);
 }
 
 .chat-msg-assistant {
   align-self: flex-start;
-  background: #f0f0f0;
+  background: rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: #333;
-  border-bottom-left-radius: 4px;
+  border-bottom-left-radius: var(--radius-sm);
 }
+
+/* 消息时间戳 */
+.msg-time {
+  display: block;
+  font-size: 10px;
+  color: rgba(0,0,0,0.35);
+  margin-top: 3px;
+  line-height: 1;
+}
+
+.chat-msg-user .msg-time {
+  color: rgba(255,255,255,0.6);
+  text-align: right;
+}
+
+/* 复制按钮 */
+.msg-copy-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(255,255,255,0.85);
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 4px;
+  color: #666;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 1px 4px;
+  line-height: 1.4;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  user-select: none;
+}
+
+.chat-msg:hover .msg-copy-btn {
+  opacity: 1;
+}
+
+.msg-copy-btn:hover {
+  background: white;
+  color: var(--clr-primary);
+}
+
+/* Markdown 渲染样式 */
+.markdown-body {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.markdown-body p { margin-bottom: 4px; }
+.markdown-body p:last-child { margin-bottom: 0; }
+
+.markdown-body code {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  background: rgba(0,0,0,0.08);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.markdown-body pre {
+  background: rgba(0,0,0,0.06);
+  border-radius: 6px;
+  padding: 8px;
+  overflow-x: auto;
+  margin: 4px 0;
+}
+
+.markdown-body pre code {
+  background: none;
+  padding: 0;
+}
+
+.markdown-body ul, .markdown-body ol {
+  padding-left: 18px;
+  margin: 4px 0;
+}
+
+.markdown-body strong { font-weight: 700; }
+.markdown-body em { font-style: italic; }
 
 .chat-input-area {
   display: flex;
   gap: 8px;
   padding: 10px 12px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid rgba(0,0,0,0.06);
   flex-shrink: 0;
 }
 
 .chat-input {
   flex: 1;
-  border: 1px solid #ddd;
+  border: 1px solid rgba(0,0,0,0.12);
   border-radius: 20px;
   padding: 8px 14px;
   font-size: 13px;
   outline: none;
-  background: #fafafa;
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .chat-input:focus {
-  border-color: #FFB464;
+  border-color: var(--clr-primary);
   background: white;
 }
 
@@ -210,7 +369,7 @@ html, body {
   height: 36px;
   border-radius: 50%;
   border: none;
-  background: #FFB464;
+  background: var(--clr-primary-gradient);
   color: white;
   font-size: 16px;
   cursor: pointer;
@@ -218,10 +377,12 @@ html, body {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: filter 0.2s ease, transform 0.15s ease;
 }
 
 .chat-send:hover {
-  background: #FF9A3C;
+  filter: brightness(1.1);
+  transform: scale(1.05);
 }
 
 /* ===== 设置面板 ===== */
@@ -231,15 +392,17 @@ html, body {
   right: 210px;
   width: 0;
   height: 0;
-  background: rgba(255, 255, 255, 0.98);
-  border-radius: 16px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--radius-xl);
   overflow: hidden;
   opacity: 0;
   transform: scale(0.8) translateX(20px);
   transition: all 0.25s ease-out;
   pointer-events: none;
-  border: 1px solid rgba(0,0,0,0.08);
 }
 
 #settings-panel.open {
@@ -254,11 +417,12 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  padding: 12px 14px;
+  background: var(--clr-purple-gradient);
   color: white;
   font-size: 13px;
   font-weight: 600;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
 }
 
 .settings-close {
@@ -269,6 +433,7 @@ html, body {
   cursor: pointer;
   padding: 2px 6px;
   border-radius: 4px;
+  transition: background 0.15s ease;
 }
 
 .settings-close:hover {
@@ -278,28 +443,29 @@ html, body {
 .settings-body {
   padding: 14px;
   overflow-y: auto;
-  height: calc(100% - 42px);
+  height: calc(100% - 44px);
 }
 
 .settings-body::-webkit-scrollbar {
-  width: 4px;
+  width: 3px;
 }
 .settings-body::-webkit-scrollbar-thumb {
-  background: #ddd;
+  background: rgba(139,92,246,0.3);
   border-radius: 2px;
 }
 
-/* 分区标题 */
+/* 分区标题 — 带左侧彩条的小标签 */
 .settings-section-title {
   font-size: 11px;
   font-weight: 700;
-  color: #667eea;
+  color: #8B5CF6;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
-  margin-top: 6px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid #eef;
+  margin-top: 12px;
+  padding-left: 8px;
+  border-left: 3px solid #8B5CF6;
+  line-height: 1.2;
 }
 
 .settings-section-title:first-child {
@@ -322,13 +488,14 @@ html, body {
 .settings-group input,
 .settings-group textarea {
   width: 100%;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: var(--radius-sm);
   padding: 7px 10px;
   font-size: 12px;
   outline: none;
   font-family: inherit;
-  background: white;
+  background: rgba(255,255,255,0.7);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .settings-group select {
@@ -337,13 +504,15 @@ html, body {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%23999' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
+  background-color: rgba(255,255,255,0.7);
   padding-right: 28px;
 }
 
 .settings-group select:focus,
 .settings-group input:focus,
 .settings-group textarea:focus {
-  border-color: #667eea;
+  border-color: var(--clr-primary);
+  box-shadow: 0 0 0 2px rgba(255,140,66,0.15);
 }
 
 .settings-actions {
@@ -354,29 +523,35 @@ html, body {
 
 .btn-save {
   flex: 1;
-  padding: 8px;
+  padding: 9px;
   border: none;
-  border-radius: 8px;
-  background: #667eea;
+  border-radius: var(--radius-sm);
+  background: var(--clr-primary-gradient);
   color: white;
   font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.btn-save:hover { background: #5a6fd6; }
+.btn-save:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255,140,66,0.35);
+}
 
 .btn-cancel {
   flex: 1;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: white;
+  padding: 9px;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.6);
   color: #666;
   font-size: 13px;
   cursor: pointer;
+  transition: background 0.15s ease;
 }
 
-.btn-cancel:hover { background: #f5f5f5; }
+.btn-cancel:hover { background: rgba(255,255,255,0.9); }
 
 .settings-status {
   margin-top: 8px;
@@ -385,28 +560,29 @@ html, body {
   min-height: 18px;
 }
 
-/* Gateway 状态指示器 */
+/* Gateway 状态指示器 — 圆润 badge */
 .gateway-status {
-  padding: 6px 10px;
-  border-radius: 8px;
-  background: #f9f9f9;
+  padding: 5px 10px;
+  border-radius: 20px;
+  background: rgba(0,0,0,0.05);
   font-size: 12px;
   font-weight: 500;
+  display: inline-block;
 }
 
 .gateway-status.gw-connected {
-  background: #e8f5e9;
-  color: #2e7d32;
+  background: rgba(52,211,153,0.15);
+  color: #059669;
 }
 
 .gateway-status.gw-partial {
-  background: #fff8e1;
-  color: #f57f17;
+  background: rgba(251,191,36,0.15);
+  color: #d97706;
 }
 
 .gateway-status.gw-disconnected {
-  background: #fce4ec;
-  color: #c62828;
+  background: rgba(239,68,68,0.15);
+  color: #dc2626;
 }
 
 .gateway-detail {
@@ -420,6 +596,172 @@ html, body {
   font-size: 11px;
   color: #999;
   margin-top: 3px;
+}
+
+/* ===== 技能面板 ===== */
+#skill-panel {
+  position: fixed;
+  bottom: 10px;
+  right: 210px;
+  width: 0;
+  height: 0;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  opacity: 0;
+  transform: scale(0.8) translateX(20px);
+  transition: all 0.25s ease-out;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+}
+
+#skill-panel.open {
+  width: 300px;
+  height: 420px;
+  opacity: 1;
+  transform: scale(1) translateX(0);
+  pointer-events: all;
+}
+
+.skill-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: var(--clr-green-gradient);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  flex-shrink: 0;
+}
+
+.skill-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+
+.skill-close:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+/* 胶囊形 Tab bar */
+.skill-tabs {
+  display: flex;
+  padding: 10px 12px 0;
+  gap: 4px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.skill-tab {
+  flex: 1;
+  padding: 6px 4px;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 500;
+  color: #888;
+  cursor: pointer;
+  border-radius: 20px;
+  transition: color 0.2s ease, background 0.2s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.skill-tab.active {
+  background: rgba(52,211,153,0.15);
+  color: #059669;
+  font-weight: 700;
+}
+
+.skill-tab:hover:not(.active) {
+  background: rgba(0,0,0,0.04);
+  color: #555;
+}
+
+.skill-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 12px 12px;
+}
+
+.skill-body::-webkit-scrollbar {
+  width: 3px;
+}
+.skill-body::-webkit-scrollbar-thumb {
+  background: rgba(52,211,153,0.3);
+  border-radius: 2px;
+}
+
+/* 技能卡片 */
+.skill-card {
+  background: rgba(255,255,255,0.7);
+  border: 1px solid rgba(255,255,255,0.8);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.skill-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+}
+
+.skill-card-locked {
+  filter: grayscale(0.8) opacity(0.5);
+}
+
+.skill-card-locked:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.skill-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 3px;
+}
+
+.skill-card-desc {
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.skill-stars {
+  display: flex;
+  gap: 2px;
+}
+
+.skill-star {
+  font-size: 13px;
+  color: #FF8C42;
+}
+
+.skill-star.empty {
+  color: rgba(0,0,0,0.15);
+}
+
+.skill-empty {
+  text-align: center;
+  color: #aaa;
+  font-size: 12px;
+  padding: 24px 0;
 }
 
 /* ===== 动画 ===== */

@@ -179,6 +179,10 @@ function createWindow() {
         label: '⚙️ 设置',
         click: () => mainWindow.webContents.send('open-settings')
       },
+      {
+        label: '✨ 技能',
+        click: () => mainWindow.webContents.send('open-skills')
+      },
       { type: 'separator' },
       {
         label: '🍤 喂零食',
