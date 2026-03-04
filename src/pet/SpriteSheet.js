@@ -31,10 +31,44 @@ export class SpriteSheet {
   _loadImage(src) {
     return new Promise((resolve, reject) => {
       const img = new Image();
-      img.onload = () => resolve(img);
+      img.onload = () => {
+        // Chroma key: remove green background and make it transparent
+        const processed = this._removeGreenBackground(img);
+        resolve(processed);
+      };
       img.onerror = (e) => reject(new Error(`Failed to load spritesheet: ${src}`));
       img.src = src;
     });
+  }
+
+  /**
+   * Remove green (chroma key) background from spritesheet image
+   * @param {HTMLImageElement} img
+   * @returns {HTMLCanvasElement} processed canvas with transparent background
+   */
+  _removeGreenBackground(img) {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+
+      // Detect green-screen pixels: high green, low red & blue
+      if (g > 120 && g > r * 1.4 && g > b * 1.4) {
+        data[i + 3] = 0; // make transparent
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    return canvas;
   }
 
   /**

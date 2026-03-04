@@ -48,8 +48,9 @@ export class PetRenderer {
     this.overlayDrawFn = null;   // 兼容旧 API
     this._overlays = [];         // 多 overlay 数组
 
-    // 启用像素风格渲染（锐利边缘）
-    this.ctx.imageSmoothingEnabled = false;
+    // 高清素材：启用平滑缩放
+    this.ctx.imageSmoothingEnabled = true;
+    this.ctx.imageSmoothingQuality = 'high';
   }
 
   /**
@@ -182,7 +183,8 @@ export class PetRenderer {
 
     // 清除画布（透明）
     this.ctx.clearRect(0, 0, w, h);
-    this.ctx.imageSmoothingEnabled = false;
+    this.ctx.imageSmoothingEnabled = true;
+    this.ctx.imageSmoothingQuality = 'high';
 
     // 根据成长阶段选择 spritesheet 和 CSS filter
     const sheet = this._getActiveSheet();

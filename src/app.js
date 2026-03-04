@@ -100,7 +100,7 @@ class OpenClawPet {
     this.intimacySystem = new IntimacySystem();
 
     // 3. 初始化渲染器（传入幼猫 sheet）
-    this.renderer = new PetRenderer(this.canvas, this.spriteSheet, this.kittenSheet, 128);
+    this.renderer = new PetRenderer(this.canvas, this.spriteSheet, this.kittenSheet, 960);
     this.renderer.setGrowthStage(this.intimacySystem.stage);
 
     // 3b. 喂食动画
