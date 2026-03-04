@@ -38,6 +38,7 @@ export class PetRenderer {
     // 渲染循环
     this._lastTime = 0;
     this._animFrameId = null;
+    this._fallbackTimer = null; // rAF 停滞时的保底定时器
 
     // 呼吸效果
     this._totalTime = 0;
@@ -51,8 +52,11 @@ export class PetRenderer {
     // 额外 spritesheet 映射：animationName → SpriteSheet
     this._extraSheets = new Map();
 
-    // 复合动画（enter→loop）：stateName → { enter, loop }
+    // 复合动画（enter→loop→exit）：stateName → { enter, loop, exit? }
     this._compoundAnims = new Map();
+
+    // 正在播放 exit 动画时，暂存目标动画名
+    this._exitTarget = null;
 
     // 高清素材：启用平滑缩放
     this.ctx.imageSmoothingEnabled = true;
@@ -69,13 +73,14 @@ export class PetRenderer {
   }
 
   /**
-   * 注册复合动画（enter→loop 自动衔接）
+   * 注册复合动画（enter→loop→exit 自动衔接）
    * @param {string} stateName - 状态名（如 'sleep'）
    * @param {string} enterAnim - 进入动画名（如 'sleep_enter'）
    * @param {string} loopAnim - 循环动画名（如 'sleep_loop'）
+   * @param {string} [exitAnim] - 退出动画名（如 'sleep_exit'，可选）
    */
-  registerCompound(stateName, enterAnim, loopAnim) {
-    this._compoundAnims.set(stateName, { enter: enterAnim, loop: loopAnim });
+  registerCompound(stateName, enterAnim, loopAnim, exitAnim) {
+    this._compoundAnims.set(stateName, { enter: enterAnim, loop: loopAnim, exit: exitAnim || null });
   }
 
   /**
@@ -101,6 +106,17 @@ export class PetRenderer {
     // 状态→动画名映射（某些状态复用已有动画）
     const animMap = { edge_idle: 'sit' };
     const resolved = animMap[animationName] || animationName;
+
+    // 正在播放 exit 动画 → 忽略（等 exit 播完再切）
+    if (this._exitTarget !== null) return;
+
+    // 检查是否正在离开一个有 exit 动画的复合状态
+    const leavingCompound = this._getActiveCompound();
+    if (leavingCompound && leavingCompound.exit && resolved !== leavingCompound.exit) {
+      // 当前正处于该复合状态的 enter/loop 阶段，且目标不是 exit 本身
+      this._playCompoundExit(leavingCompound, resolved);
+      return;
+    }
 
     // 复合动画：自动播放 enter 部分
     const compound = this._compoundAnims.get(resolved);
@@ -156,6 +172,53 @@ export class PetRenderer {
     };
   }
 
+  /**
+   * 获取当前正在播放的复合动画（如果有的话）
+   * @returns {{ enter: string, loop: string, exit: string|null } | null}
+   */
+  _getActiveCompound() {
+    for (const [, compound] of this._compoundAnims) {
+      if (this.currentAnimation === compound.enter || this.currentAnimation === compound.loop) {
+        return compound;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * 播放复合动画的 exit 部分，结束后切换到目标动画
+   * @param {{ enter: string, loop: string, exit: string }} compound
+   * @param {string} targetAnimation - exit 播完后要切到的动画
+   */
+  _playCompoundExit(compound, targetAnimation) {
+    const sheet = this._getSheetForAnimation(compound.exit);
+    const anim = sheet.getAnimation(compound.exit);
+    if (!anim) {
+      // exit 动画不存在，直接切到目标
+      this.currentAnimation = targetAnimation;
+      this.currentFrame = 0;
+      this.frameAccumulator = 0;
+      return;
+    }
+
+    this._exitTarget = targetAnimation;
+    this.currentAnimation = compound.exit;
+    this.currentFrame = 0;
+    this.frameAccumulator = 0;
+
+    const prevCallback = this.onAnimationEnd;
+    this.onAnimationEnd = (animName) => {
+      if (animName === compound.exit) {
+        // exit 播完，切到目标动画
+        this._exitTarget = null;
+        this.currentAnimation = targetAnimation;
+        this.currentFrame = 0;
+        this.frameAccumulator = 0;
+        this.onAnimationEnd = prevCallback;
+      }
+    };
+  }
+
   /** 根据动画名获取对应的 spritesheet */
   _getSheetForAnimation(animName) {
     const extra = this._extraSheets.get(animName);
@@ -190,6 +253,17 @@ export class PetRenderer {
     this.isPlaying = true;
     this._lastTime = performance.now();
     this._loop(this._lastTime);
+
+    // 保底定时器：Windows 上拖拽窗口时 rAF 会停滞，用 setInterval 兜底
+    this._fallbackTimer = setInterval(() => {
+      const now = performance.now();
+      const sinceLastRender = now - this._lastTime;
+      if (sinceLastRender > 80) { // rAF 超过 80ms 未触发
+        this._lastTime = now;
+        this._updateFrame(sinceLastRender);
+        this._render();
+      }
+    }, 50);
   }
 
   /**
@@ -200,6 +274,10 @@ export class PetRenderer {
     if (this._animFrameId) {
       cancelAnimationFrame(this._animFrameId);
       this._animFrameId = null;
+    }
+    if (this._fallbackTimer) {
+      clearInterval(this._fallbackTimer);
+      this._fallbackTimer = null;
     }
   }
 
