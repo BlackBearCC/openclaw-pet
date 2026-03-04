@@ -115,11 +115,6 @@ export class StreamingBubble {
     }
 
     this.pendingText = remainder;
-    if (remainder) {
-      this._updateCurrentEl(remainder);
-    } else {
-      this._removeCurrentEl();
-    }
   }
 
   /** 入队 — 确保至少 1 秒间隔 */
