@@ -1100,3 +1100,169 @@ html, body {
   from { transform: translateY(0) scale(1); }
   to { transform: translateY(-3px) scale(1.05); }
 }
+
+/* =============================================
+   Bottom Chat — 浮动图标 + 紧凑输入
+   ============================================= */
+
+.bottom-chat-toggle {
+  position: absolute;
+  bottom: 8px;
+  left: 4px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-ink-sm);
+  transition: transform 0.2s cubic-bezier(0.34, 1.2, 0.64, 1),
+              background 0.2s ease,
+              box-shadow 0.15s ease;
+  z-index: 25;
+  padding: 0;
+}
+.bottom-chat-toggle.right {
+  left: auto;
+  right: 4px;
+}
+.bottom-chat-toggle:hover {
+  transform: scale(1.12);
+  background: var(--clr-primary-light);
+}
+.bottom-chat-toggle:active {
+  transform: scale(0.95);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+.bottom-chat-toggle.active {
+  background: var(--clr-primary);
+  color: white;
+}
+
+/* 输入栏 */
+.bottom-chat-input {
+  position: absolute;
+  bottom: -46px;
+  left: 0;
+  width: 220px;
+  display: flex;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--paper);
+  border: var(--border-ink);
+  border-radius: var(--radius-sketchy-pill);
+  box-shadow: var(--shadow-ink);
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.85) translateY(8px);
+  transform-origin: top left;
+  transition: all 0.25s cubic-bezier(0.34, 1.2, 0.64, 1);
+  z-index: 25;
+}
+.bottom-chat-input.right {
+  left: auto;
+  right: 0;
+  transform-origin: top right;
+}
+.bottom-chat-input.open {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  pointer-events: all;
+}
+
+.bottom-chat-field {
+  flex: 1;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sketchy-sm);
+  padding: 5px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 600;
+  outline: none;
+  background: white;
+  color: var(--ink);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  min-width: 0;
+}
+.bottom-chat-field:focus {
+  border-color: var(--clr-primary);
+  box-shadow: 2px 2px 0 var(--clr-primary);
+}
+.bottom-chat-field::placeholder {
+  color: var(--ink-light);
+  font-weight: 500;
+}
+
+.bottom-chat-send {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  background: var(--clr-primary);
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-ink-sm);
+  transition: transform 0.15s ease;
+  font-weight: 700;
+  padding: 0;
+}
+.bottom-chat-send:hover { transform: scale(1.08); }
+.bottom-chat-send:active { transform: scale(0.95); box-shadow: 1px 1px 0 var(--ink); }
+.bottom-chat-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* =============================================
+   Streaming Bubble — 流式多段气泡
+   ============================================= */
+
+.stream-segments-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 4px;
+  max-height: 200px;
+  overflow: hidden;
+  width: 100%;
+  pointer-events: none;
+}
+
+.stream-segment {
+  background: var(--paper);
+  border: 2.5px solid var(--ink);
+  border-radius: 16px 4px 14px 6px / 6px 14px 4px 16px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  font-weight: 600;
+  color: var(--ink);
+  max-width: 170px;
+  word-wrap: break-word;
+  box-shadow: 3px 3px 0 var(--ink);
+  white-space: pre-wrap;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.3s ease, transform 0.3s ease, font-size 0.5s ease-out;
+}
+.stream-segment.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.stream-segment.current {
+  border-style: dashed;
+  box-shadow: 2px 2px 0 rgba(42, 42, 42, 0.4);
+}
+.stream-segment.retiring {
+  opacity: 0 !important;
+  font-size: 10px;
+  transform: translateY(-15px) scale(0.85) !important;
+  transition: all 0.5s ease-out !important;
+  pointer-events: none;
+}

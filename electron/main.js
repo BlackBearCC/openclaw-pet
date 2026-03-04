@@ -30,6 +30,7 @@ let mainWindow = null;
 let llmService = null;
 let win32Monitor = null;
 let isExpanded = false;
+let expandedSize = null; // 当前展开的尺寸（用于正确收缩）
 let clipboardInterval = null;
 let lastClipboardText = '';
 
@@ -128,19 +129,23 @@ function createWindow() {
   });
 
   // ===== IPC: 窗口展开/收缩 =====
-  ipcMain.on('expand-window', (event, expand) => {
+  ipcMain.on('expand-window', (event, expand, customSize) => {
     if (!mainWindow) return;
     const [x, y] = mainWindow.getPosition();
+    const targetSize = customSize || EXPANDED_SIZE;
 
     if (expand && !isExpanded) {
       isExpanded = true;
-      const newX = Math.max(0, x - (EXPANDED_SIZE.width - PET_SIZE.width));
-      const newY = Math.max(0, y - (EXPANDED_SIZE.height - PET_SIZE.height));
-      mainWindow.setBounds({ x: newX, y: newY, width: EXPANDED_SIZE.width, height: EXPANDED_SIZE.height });
+      expandedSize = targetSize;
+      const newX = Math.max(0, x - (targetSize.width - PET_SIZE.width));
+      const newY = Math.max(0, y - (targetSize.height - PET_SIZE.height));
+      mainWindow.setBounds({ x: newX, y: newY, width: targetSize.width, height: targetSize.height });
     } else if (!expand && isExpanded) {
+      const restoreSize = expandedSize || EXPANDED_SIZE;
       isExpanded = false;
-      const newX = x + (EXPANDED_SIZE.width - PET_SIZE.width);
-      const newY = y + (EXPANDED_SIZE.height - PET_SIZE.height);
+      expandedSize = null;
+      const newX = x + (restoreSize.width - PET_SIZE.width);
+      const newY = y + (restoreSize.height - PET_SIZE.height);
       mainWindow.setBounds({ x: newX, y: newY, width: PET_SIZE.width, height: PET_SIZE.height });
     }
   });
