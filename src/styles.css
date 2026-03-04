@@ -1,30 +1,42 @@
 /* =============================================
-   OpenClaw Pet — Glassmorphism · 暖橙主题
+   OpenClaw Pet — 手绘线条 · 赛璐璐风格
    ============================================= */
 
 :root {
-  /* Brand colors */
+  /* Brand colors — flat cel-shading fills */
   --clr-primary: #FF8C42;
   --clr-primary-dark: #E67324;
   --clr-primary-light: #FFB27A;
-  --clr-primary-gradient: linear-gradient(135deg, #FF8C42, #FF6B35);
-  --clr-purple-gradient: linear-gradient(135deg, #8B5CF6, #6D28D9);
-  --clr-green-gradient: linear-gradient(135deg, #34D399, #059669);
+  --clr-purple: #8B5CF6;
+  --clr-green: #3EC98B;
 
-  /* Glassmorphism */
-  --glass-bg: rgba(255, 255, 255, 0.88);
-  --glass-border: rgba(255, 255, 255, 0.6);
-  --glass-blur: blur(20px);
-  --glass-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+  /* Ink & paper */
+  --ink: #2A2A2A;
+  --ink-light: #4A4A4A;
+  --ink-faint: rgba(42, 42, 42, 0.12);
+  --paper: #FFF9F2;
+  --paper-warm: #FFF5EA;
+  --paper-cool: #F5F2FF;
+  --paper-green: #EFFFF6;
 
-  /* Radii */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 18px;
-  --radius-xl: 24px;
+  /* Hand-drawn border */
+  --border-w: 2.5px;
+  --border-ink: var(--border-w) solid var(--ink);
+
+  /* Sketchy radii — irregular corners for organic feel */
+  --radius-sketchy: 18px 4px 16px 6px / 6px 16px 4px 18px;
+  --radius-sketchy-sm: 10px 3px 8px 4px / 4px 8px 3px 10px;
+  --radius-sketchy-pill: 20px 8px 20px 8px / 8px 20px 8px 20px;
+  --radius-bubble: 16px 16px 16px 4px / 16px 16px 4px 16px;
+  --radius-bubble-r: 16px 16px 4px 16px / 16px 16px 16px 4px;
+
+  /* Shadow — hand-drawn ink shadow */
+  --shadow-ink: 3px 3px 0 var(--ink);
+  --shadow-ink-sm: 2px 2px 0 var(--ink);
+  --shadow-ink-light: 2px 2px 0 rgba(42, 42, 42, 0.15);
 
   /* Animation */
-  --transition: 0.25s cubic-bezier(0.34, 1.2, 0.64, 1);
+  --transition: 0.2s cubic-bezier(0.34, 1.2, 0.64, 1);
 }
 
 * {
@@ -56,8 +68,8 @@ html, body {
 /* ===== 宠物区域（右下角） ===== */
 #pet-area {
   position: relative;
-  width: 512px;
-  height: 512px;
+  width: 256px;
+  height: 256px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -66,8 +78,8 @@ html, body {
 }
 
 #pet-canvas {
-  width: 512px;
-  height: 512px;
+  width: 256px;
+  height: 256px;
   cursor: grab;
   animation: petAppear 0.5s ease-out;
 }
@@ -79,22 +91,19 @@ html, body {
 /* ===== 气泡 ===== */
 #bubble-container {
   position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 200px;
+  top: 15px;
+  left: 5px;
+  width: 180px;
   pointer-events: none;
   z-index: 20;
 }
 
-/* ===== 面板共用基础 ===== */
+/* ===== 面板共用基础 — 手绘线条风 ===== */
 .panel-base {
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  border-radius: var(--radius-xl);
+  background: var(--paper);
+  border: var(--border-ink);
+  border-radius: var(--radius-sketchy);
+  box-shadow: var(--shadow-ink);
 }
 
 /* ===== 聊天面板 ===== */
@@ -104,12 +113,10 @@ html, body {
   right: 210px;
   width: 0;
   height: 0;
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  border-radius: var(--radius-xl);
+  background: var(--paper);
+  border: var(--border-ink);
+  border-radius: var(--radius-sketchy);
+  box-shadow: var(--shadow-ink);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -131,19 +138,21 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
-  background: var(--clr-primary-gradient);
+  padding: 10px 14px;
+  background: var(--clr-primary);
   color: white;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   flex-shrink: 0;
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  border-bottom: var(--border-ink);
+  /* no top border-radius — parent clips it */
 }
 
 .chat-title {
   display: flex;
   align-items: center;
   gap: 6px;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.15);
 }
 
 .chat-header-actions {
@@ -155,29 +164,29 @@ html, body {
 .chat-close,
 .chat-abort {
   background: none;
-  border: none;
+  border: 1.5px solid rgba(255,255,255,0.5);
   color: white;
-  font-size: 16px;
+  font-size: 14px;
   cursor: pointer;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-sketchy-sm);
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background var(--transition);
+  font-weight: 700;
 }
 
 .chat-close:hover,
 .chat-abort:hover {
-  background: rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.25);
 }
 
 .chat-abort {
   font-size: 12px;
   padding: 3px 8px;
-  background: rgba(255,255,255,0.15);
-  border-radius: 6px;
+  background: rgba(0,0,0,0.1);
 }
 
 .chat-messages {
@@ -188,17 +197,27 @@ html, body {
   flex-direction: column;
   gap: 8px;
   position: relative;
+  background: var(--paper-warm);
+  /* subtle ruled-paper pattern */
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 27px,
+      rgba(42, 42, 42, 0.05) 27px,
+      rgba(42, 42, 42, 0.05) 28px
+    );
 }
 
 .chat-messages::-webkit-scrollbar {
-  width: 3px;
+  width: 4px;
 }
 .chat-messages::-webkit-scrollbar-thumb {
-  background: rgba(255,140,66,0.3);
+  background: var(--ink);
   border-radius: 2px;
 }
 .chat-messages::-webkit-scrollbar-thumb:hover {
-  background: rgba(255,140,66,0.6);
+  background: var(--clr-primary);
 }
 
 /* 滚动到底部按钮 */
@@ -209,7 +228,7 @@ html, body {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  border: none;
+  border: 2px solid var(--ink);
   background: var(--clr-primary);
   color: white;
   font-size: 14px;
@@ -217,13 +236,14 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(255,140,66,0.4);
+  box-shadow: var(--shadow-ink-sm);
   opacity: 0;
   transform: scale(0);
   transition: opacity 0.2s ease, transform 0.2s ease;
   pointer-events: none;
   z-index: 5;
   flex-shrink: 0;
+  font-weight: 700;
 }
 
 .scroll-to-bottom.visible {
@@ -235,35 +255,35 @@ html, body {
 .chat-msg {
   max-width: 87%;
   padding: 8px 12px;
-  border-radius: var(--radius-lg);
   font-size: 13px;
   line-height: 1.5;
   word-wrap: break-word;
   animation: msgIn 0.2s ease-out;
   position: relative;
+  border: 2px solid var(--ink);
+  box-shadow: var(--shadow-ink-sm);
 }
 
 .chat-msg-user {
   align-self: flex-end;
-  background: var(--clr-primary-gradient);
+  background: var(--clr-primary);
   color: white;
-  border-bottom-right-radius: var(--radius-sm);
+  border-radius: var(--radius-bubble-r);
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.1);
 }
 
 .chat-msg-assistant {
   align-self: flex-start;
-  background: rgba(0, 0, 0, 0.05);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  color: #333;
-  border-bottom-left-radius: var(--radius-sm);
+  background: white;
+  color: var(--ink);
+  border-radius: var(--radius-bubble);
 }
 
 /* 消息时间戳 */
 .msg-time {
   display: block;
   font-size: 10px;
-  color: rgba(0,0,0,0.35);
+  color: rgba(42, 42, 42, 0.4);
   margin-top: 3px;
   line-height: 1;
 }
@@ -278,10 +298,10 @@ html, body {
   position: absolute;
   top: 4px;
   right: 4px;
-  background: rgba(255,255,255,0.85);
-  border: 1px solid rgba(0,0,0,0.1);
-  border-radius: 4px;
-  color: #666;
+  background: white;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius-sketchy-sm);
+  color: var(--ink);
   font-size: 11px;
   cursor: pointer;
   padding: 1px 4px;
@@ -289,6 +309,7 @@ html, body {
   opacity: 0;
   transition: opacity 0.15s ease;
   user-select: none;
+  box-shadow: 1px 1px 0 var(--ink);
 }
 
 .chat-msg:hover .msg-copy-btn {
@@ -296,8 +317,8 @@ html, body {
 }
 
 .msg-copy-btn:hover {
-  background: white;
-  color: var(--clr-primary);
+  background: var(--clr-primary);
+  color: white;
 }
 
 /* Markdown 渲染样式 */
@@ -312,14 +333,16 @@ html, body {
 .markdown-body code {
   font-family: 'Consolas', 'Courier New', monospace;
   font-size: 12px;
-  background: rgba(0,0,0,0.08);
+  background: rgba(42, 42, 42, 0.08);
   padding: 1px 4px;
   border-radius: 3px;
+  border: 1px solid var(--ink-faint);
 }
 
 .markdown-body pre {
-  background: rgba(0,0,0,0.06);
-  border-radius: 6px;
+  background: rgba(42, 42, 42, 0.06);
+  border: 1.5px solid var(--ink-faint);
+  border-radius: var(--radius-sketchy-sm);
   padding: 8px;
   overflow-x: auto;
   margin: 4px 0;
@@ -328,6 +351,7 @@ html, body {
 .markdown-body pre code {
   background: none;
   padding: 0;
+  border: none;
 }
 
 .markdown-body ul, .markdown-body ol {
@@ -342,34 +366,34 @@ html, body {
   display: flex;
   gap: 8px;
   padding: 10px 12px;
-  border-top: 1px solid rgba(0,0,0,0.06);
+  border-top: 2px solid var(--ink);
   flex-shrink: 0;
+  background: var(--paper);
 }
 
 .chat-input {
   flex: 1;
-  border: 1px solid rgba(0,0,0,0.12);
-  border-radius: 20px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sketchy-pill);
   padding: 8px 14px;
   font-size: 13px;
   outline: none;
-  background: rgba(255,255,255,0.7);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  transition: border-color 0.2s ease, background 0.2s ease;
+  background: white;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  font-family: inherit;
 }
 
 .chat-input:focus {
   border-color: var(--clr-primary);
-  background: white;
+  box-shadow: 2px 2px 0 var(--clr-primary);
 }
 
 .chat-send {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  border: none;
-  background: var(--clr-primary-gradient);
+  border: 2px solid var(--ink);
+  background: var(--clr-primary);
   color: white;
   font-size: 16px;
   cursor: pointer;
@@ -377,12 +401,18 @@ html, body {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: filter 0.2s ease, transform 0.15s ease;
+  box-shadow: var(--shadow-ink-sm);
+  transition: transform 0.15s ease;
+  font-weight: 700;
 }
 
 .chat-send:hover {
-  filter: brightness(1.1);
-  transform: scale(1.05);
+  transform: scale(1.08);
+}
+
+.chat-send:active {
+  transform: scale(0.95);
+  box-shadow: 1px 1px 0 var(--ink);
 }
 
 /* ===== 设置面板 ===== */
@@ -392,12 +422,10 @@ html, body {
   right: 210px;
   width: 0;
   height: 0;
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  border-radius: var(--radius-xl);
+  background: var(--paper);
+  border: var(--border-ink);
+  border-radius: var(--radius-sketchy);
+  box-shadow: var(--shadow-ink);
   overflow: hidden;
   opacity: 0;
   transform: scale(0.8) translateX(20px);
@@ -417,54 +445,57 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
-  background: var(--clr-purple-gradient);
+  padding: 10px 14px;
+  background: var(--clr-purple);
   color: white;
   font-size: 13px;
-  font-weight: 600;
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  font-weight: 700;
+  border-bottom: var(--border-ink);
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.15);
 }
 
 .settings-close {
   background: none;
-  border: none;
+  border: 1.5px solid rgba(255,255,255,0.5);
   color: white;
-  font-size: 16px;
+  font-size: 14px;
   cursor: pointer;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-sketchy-sm);
   transition: background 0.15s ease;
+  font-weight: 700;
 }
 
 .settings-close:hover {
-  background: rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.25);
 }
 
 .settings-body {
   padding: 14px;
   overflow-y: auto;
   height: calc(100% - 44px);
+  background: var(--paper-cool);
 }
 
 .settings-body::-webkit-scrollbar {
-  width: 3px;
+  width: 4px;
 }
 .settings-body::-webkit-scrollbar-thumb {
-  background: rgba(139,92,246,0.3);
+  background: var(--ink);
   border-radius: 2px;
 }
 
-/* 分区标题 — 带左侧彩条的小标签 */
+/* 分区标题 — 带左侧墨线 */
 .settings-section-title {
   font-size: 11px;
-  font-weight: 700;
-  color: #8B5CF6;
+  font-weight: 800;
+  color: var(--clr-purple);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
   margin-top: 12px;
   padding-left: 8px;
-  border-left: 3px solid #8B5CF6;
+  border-left: 3px solid var(--ink);
   line-height: 1.2;
 }
 
@@ -479,8 +510,8 @@ html, body {
 .settings-group label {
   display: block;
   font-size: 12px;
-  font-weight: 600;
-  color: #555;
+  font-weight: 700;
+  color: var(--ink);
   margin-bottom: 4px;
 }
 
@@ -488,23 +519,23 @@ html, body {
 .settings-group input,
 .settings-group textarea {
   width: 100%;
-  border: 1px solid rgba(0,0,0,0.12);
-  border-radius: var(--radius-sm);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sketchy-sm);
   padding: 7px 10px;
   font-size: 12px;
   outline: none;
   font-family: inherit;
-  background: rgba(255,255,255,0.7);
+  background: white;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .settings-group select {
   cursor: pointer;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%23999' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%232a2a2a' fill='none' stroke-width='2'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
-  background-color: rgba(255,255,255,0.7);
+  background-color: white;
   padding-right: 28px;
 }
 
@@ -512,7 +543,7 @@ html, body {
 .settings-group input:focus,
 .settings-group textarea:focus {
   border-color: var(--clr-primary);
-  box-shadow: 0 0 0 2px rgba(255,140,66,0.15);
+  box-shadow: 2px 2px 0 var(--clr-primary);
 }
 
 .settings-actions {
@@ -524,77 +555,95 @@ html, body {
 .btn-save {
   flex: 1;
   padding: 9px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: var(--clr-primary-gradient);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sketchy-sm);
+  background: var(--clr-primary);
   color: white;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: var(--shadow-ink-sm);
+  transition: transform 0.15s ease;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.1);
 }
 
 .btn-save:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255,140,66,0.35);
+}
+
+.btn-save:active {
+  transform: translateY(1px);
+  box-shadow: 1px 1px 0 var(--ink);
 }
 
 .btn-cancel {
   flex: 1;
   padding: 9px;
-  border: 1px solid rgba(0,0,0,0.12);
-  border-radius: var(--radius-sm);
-  background: rgba(255,255,255,0.6);
-  color: #666;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sketchy-sm);
+  background: white;
+  color: var(--ink);
   font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s ease;
+  box-shadow: var(--shadow-ink-sm);
+  transition: transform 0.15s ease;
 }
 
-.btn-cancel:hover { background: rgba(255,255,255,0.9); }
+.btn-cancel:hover {
+  transform: translateY(-1px);
+}
+
+.btn-cancel:active {
+  transform: translateY(1px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
 
 .settings-status {
   margin-top: 8px;
   font-size: 12px;
   text-align: center;
   min-height: 18px;
+  font-weight: 600;
 }
 
-/* Gateway 状态指示器 — 圆润 badge */
+/* Gateway 状态指示器 — 墨线 badge */
 .gateway-status {
   padding: 5px 10px;
-  border-radius: 20px;
-  background: rgba(0,0,0,0.05);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sketchy-pill);
+  background: white;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   display: inline-block;
+  box-shadow: var(--shadow-ink-light);
 }
 
 .gateway-status.gw-connected {
-  background: rgba(52,211,153,0.15);
+  background: #D1FAE5;
   color: #059669;
 }
 
 .gateway-status.gw-partial {
-  background: rgba(251,191,36,0.15);
+  background: #FEF3C7;
   color: #d97706;
 }
 
 .gateway-status.gw-disconnected {
-  background: rgba(239,68,68,0.15);
+  background: #FEE2E2;
   color: #dc2626;
 }
 
 .gateway-detail {
   font-size: 11px;
-  color: #999;
+  color: var(--ink-light);
   margin-top: 4px;
   padding-left: 2px;
 }
 
 .settings-hint {
   font-size: 11px;
-  color: #999;
+  color: var(--ink-light);
   margin-top: 3px;
 }
 
@@ -604,11 +653,13 @@ html, body {
   bottom: 134px;
   left: 50%;
   transform: translateX(-50%) scale(0.8);
-  background: rgba(50, 50, 60, 0.85);
+  background: var(--ink);
   color: white;
-  border-radius: 10px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sketchy-pill);
   padding: 3px 10px;
   font-size: 11px;
+  font-weight: 600;
   white-space: nowrap;
   display: flex;
   align-items: center;
@@ -617,6 +668,7 @@ html, body {
   transition: opacity 0.3s, transform 0.3s;
   pointer-events: none;
   z-index: 15;
+  box-shadow: 2px 2px 0 rgba(42, 42, 42, 0.3);
 }
 .tool-status-bar.visible {
   opacity: 1;
@@ -624,7 +676,7 @@ html, body {
 }
 .tool-spinner {
   width: 8px; height: 8px;
-  border: 1.5px solid rgba(255,255,255,0.3);
+  border: 2px solid rgba(255,255,255,0.3);
   border-top-color: white;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -655,15 +707,18 @@ html, body {
 }
 .mini-cat-label {
   font-size: 9px;
-  color: #666;
-  background: rgba(255,255,255,0.8);
-  border-radius: 4px;
+  color: var(--ink);
+  background: white;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius-sketchy-sm);
   padding: 1px 4px;
   max-width: 56px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   text-align: center;
+  font-weight: 600;
+  box-shadow: 1px 1px 0 var(--ink);
 }
 
 /* ===== 技能图鉴面板 ===== */
@@ -673,12 +728,10 @@ html, body {
   right: 210px;
   width: 0;
   height: 0;
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  border-radius: var(--radius-xl);
+  background: var(--paper);
+  border: var(--border-ink);
+  border-radius: var(--radius-sketchy);
+  box-shadow: var(--shadow-ink);
   overflow: hidden;
   opacity: 0;
   transform: scale(0.8) translateX(20px);
@@ -698,118 +751,145 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
-  background: var(--clr-green-gradient);
+  padding: 10px 14px;
+  background: var(--clr-green);
   color: white;
   font-size: 13px;
-  font-weight: 600;
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  font-weight: 700;
+  border-bottom: var(--border-ink);
   flex-shrink: 0;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.15);
 }
 .skill-close {
   background: none;
-  border: none;
+  border: 1.5px solid rgba(255,255,255,0.5);
   color: white;
-  font-size: 16px;
+  font-size: 14px;
   cursor: pointer;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-sketchy-sm);
+  font-weight: 700;
 }
 .skill-close:hover {
-  background: rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.25);
 }
+
 /* 图鉴标签页 */
 .almanac-tabs {
   display: flex;
   gap: 0;
-  border-bottom: 1px solid #e0e0e0;
-  padding: 0 8px;
+  border-bottom: 2px solid var(--ink);
+  padding: 0;
   flex-shrink: 0;
+  background: var(--paper);
 }
 .almanac-tab {
   flex: 1;
   padding: 8px 4px;
   background: none;
   border: none;
-  border-bottom: 2px solid transparent;
+  border-right: 1.5px solid var(--ink-faint);
   font-size: 12px;
-  color: #888;
+  font-weight: 600;
+  color: var(--ink-light);
   cursor: pointer;
   transition: all 0.15s;
 }
-.almanac-tab:hover { color: #555; }
-.almanac-tab.active {
-  color: #43b37a;
-  border-bottom-color: #43b37a;
-  font-weight: 600;
+.almanac-tab:last-child { border-right: none; }
+.almanac-tab:hover {
+  color: var(--ink);
+  background: rgba(42, 42, 42, 0.04);
 }
+.almanac-tab.active {
+  color: var(--clr-green);
+  background: var(--paper-green);
+  font-weight: 800;
+  /* bottom ink underline via box-shadow */
+  box-shadow: inset 0 -3px 0 var(--clr-green);
+}
+
 .skill-body {
   padding: 14px;
   overflow-y: auto;
   flex: 1;
+  background: var(--paper-green);
 }
-.skill-body::-webkit-scrollbar { width: 3px; }
-.skill-body::-webkit-scrollbar-thumb { background: rgba(52,211,153,0.3); border-radius: 2px; }
+.skill-body::-webkit-scrollbar { width: 4px; }
+.skill-body::-webkit-scrollbar-thumb {
+  background: var(--ink);
+  border-radius: 2px;
+}
 .skill-count {
   font-size: 11px;
-  color: #999;
+  color: var(--ink-light);
   margin-bottom: 8px;
+  font-weight: 600;
 }
 .skill-section-title {
   font-size: 11px;
-  font-weight: 700;
-  color: #43b37a;
+  font-weight: 800;
+  color: var(--clr-green);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
   margin-top: 10px;
   padding-bottom: 4px;
-  border-bottom: 1px solid #e0f0e8;
+  border-bottom: 2px solid var(--clr-green);
 }
 .skill-grid {
   display: grid;
   gap: 6px;
 }
 .skill-card {
-  background: #f8f8f8;
-  border-radius: 8px;
+  background: white;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sketchy-sm);
   padding: 8px;
-  transition: background 0.15s;
+  box-shadow: var(--shadow-ink-light);
+  transition: transform 0.15s;
 }
-.skill-card:hover { background: #f0f0f0; }
+.skill-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-ink-sm);
+}
 .skill-card-name {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 12px;
-  color: #333;
+  color: var(--ink);
 }
 .skill-card-desc {
   font-size: 11px;
-  color: #888;
+  color: var(--ink-light);
   margin-top: 2px;
 }
 .skill-tag {
   display: inline-block;
   font-size: 9px;
-  background: #e0e0e0;
-  border-radius: 4px;
+  background: white;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius-sketchy-sm);
   padding: 1px 4px;
   margin-top: 4px;
+  font-weight: 600;
 }
 .skill-tag.plugin {
-  background: #e3f2fd;
+  background: #EBF4FF;
   color: #1976d2;
+  border-color: #1976d2;
 }
 .skill-empty {
   text-align: center;
-  color: #999;
+  color: var(--ink-light);
   font-size: 12px;
   padding: 40px 0;
+  font-weight: 600;
 }
 .skill-loading {
   text-align: center;
-  color: #999;
+  color: var(--ink-light);
   font-size: 12px;
   padding: 40px 0;
+  font-weight: 600;
 }
 
 /* ===== Agent 协作连线 ===== */
@@ -820,17 +900,18 @@ html, body {
   z-index: 11;
 }
 .agent-line.idle {
-  stroke: rgba(120,120,140,0.25);
-  stroke-width: 1;
-  stroke-dasharray: 4 4;
+  stroke: rgba(42, 42, 42, 0.2);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
 }
 .agent-line.busy {
-  stroke: rgba(255,160,50,0.65);
-  stroke-width: 1.5;
+  stroke: var(--clr-primary);
+  stroke-width: 2;
 }
 .agent-badge {
   font-size: 10px;
-  background: rgba(50,50,60,0.82);
+  background: var(--ink);
+  border: 2px solid var(--ink);
   border-radius: 50%;
   width: 18px;
   height: 18px;
@@ -838,17 +919,20 @@ html, body {
   align-items: center;
   justify-content: center;
   color: white;
+  font-weight: 700;
 }
 
 /* ===== 技能图鉴星级/锁定 ===== */
 .skill-card.skill-locked {
-  background: #f0f0f0;
+  background: #F5F5F5;
   opacity: 0.55;
+  border-style: dashed;
 }
 .skill-card-locked-label {
   font-size: 11px;
-  color: #aaa;
+  color: var(--ink-light);
   margin-top: 2px;
+  font-weight: 600;
 }
 .skill-card-stars {
   font-size: 11px;
@@ -856,6 +940,7 @@ html, body {
   margin-top: 2px;
   letter-spacing: 1px;
 }
+
 /* 分身图鉴 */
 .agent-meta {
   display: flex;
@@ -866,11 +951,12 @@ html, body {
 }
 .agent-status {
   font-size: 10px;
+  font-weight: 700;
 }
-.agent-status.active { color: #43b37a; }
-.agent-status.inactive { color: #bbb; }
+.agent-status.active { color: var(--clr-green); }
+.agent-status.inactive { color: var(--ink-light); }
 .agent-time {
-  color: #aaa;
+  color: var(--ink-light);
   font-size: 10px;
 }
 .agent-inactive {
@@ -880,9 +966,9 @@ html, body {
 /* ===== SVG 任务标签 ===== */
 .agent-task-label {
   font-size: 8px;
-  fill: rgba(255, 160, 50, 0.9);
+  fill: var(--clr-primary);
   pointer-events: none;
-  filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));
+  font-weight: 700;
 }
 
 /* ===== Mini-cat 庆祝光效 ===== */
@@ -898,20 +984,23 @@ html, body {
   gap: 6px;
 }
 .achievement-card {
-  background: #f8f8f8;
-  border-radius: 8px;
+  background: white;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sketchy-sm);
   padding: 8px;
   display: flex;
   gap: 8px;
   align-items: flex-start;
+  box-shadow: var(--shadow-ink-light);
 }
 .achievement-card.unlocked {
-  background: linear-gradient(135deg, #fff9e6, #fff3cc);
-  border: 1px solid #f5c842;
+  background: #FFF9E6;
+  border-color: #d4a017;
+  box-shadow: 2px 2px 0 #d4a017;
 }
 .achievement-card.locked {
   opacity: 0.45;
-  filter: grayscale(0.8);
+  border-style: dashed;
 }
 .achievement-icon {
   font-size: 20px;
@@ -924,23 +1013,25 @@ html, body {
   min-width: 0;
 }
 .achievement-name {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 12px;
-  color: #333;
+  color: var(--ink);
 }
 .achievement-desc {
   font-size: 11px;
-  color: #888;
+  color: var(--ink-light);
   margin-top: 1px;
 }
 .achievement-date {
   font-size: 10px;
-  color: #bbb;
+  color: var(--ink-light);
   margin-top: 2px;
+  font-weight: 600;
 }
 .achievement-bonus {
   font-size: 10px;
   color: #f5a623;
+  font-weight: 700;
 }
 
 /* ===== Agent 战绩徽章 ===== */
@@ -952,18 +1043,22 @@ html, body {
 }
 .agent-stat-badge {
   font-size: 9px;
-  background: #e8f5e9;
-  color: #2e7d32;
-  border-radius: 4px;
+  background: #D1FAE5;
+  color: #059669;
+  border: 1.5px solid #059669;
+  border-radius: var(--radius-sketchy-sm);
   padding: 1px 5px;
+  font-weight: 700;
 }
 .agent-stat-badge.tools {
-  background: #e3f2fd;
+  background: #EBF4FF;
   color: #1565c0;
+  border-color: #1565c0;
 }
 .agent-stat-badge.duration {
-  background: #f3e5f5;
+  background: #F3E5F5;
   color: #6a1b9a;
+  border-color: #6a1b9a;
 }
 .agent-unique-tools {
   display: flex;
@@ -973,10 +1068,12 @@ html, body {
 }
 .agent-tool-chip {
   font-size: 9px;
-  background: #f0f0f0;
-  border-radius: 3px;
+  background: white;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius-sketchy-sm);
   padding: 1px 4px;
-  color: #666;
+  color: var(--ink);
+  font-weight: 600;
 }
 
 /* ===== 动画 ===== */

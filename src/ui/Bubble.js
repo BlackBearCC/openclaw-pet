@@ -16,21 +16,19 @@ export class Bubble {
     this.element.className = 'pet-bubble';
     this.element.style.cssText = `
       position: absolute;
-      top: 50px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(255,255,255,0.9);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255,255,255,0.7);
-      border-radius: 14px;
+      top: 0;
+      left: 0;
+      background: #FFF9F2;
+      border: 2.5px solid #2A2A2A;
+      border-radius: 16px 4px 14px 6px / 6px 14px 4px 16px;
       padding: 8px 12px;
       font-size: 12px;
       font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
-      color: #333;
-      max-width: 180px;
+      font-weight: 600;
+      color: #2A2A2A;
+      max-width: 170px;
       word-wrap: break-word;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      box-shadow: 3px 3px 0 #2A2A2A;
       opacity: 0;
       transition: opacity 0.3s ease, transform 0.3s ease;
       pointer-events: none;
@@ -38,18 +36,17 @@ export class Bubble {
       white-space: pre-wrap;
     `;
 
-    // 小三角
+    // 小三角（右下角，指向角色头部）
     const arrow = document.createElement('div');
     arrow.style.cssText = `
       position: absolute;
-      bottom: -8px;
-      left: 50%;
-      transform: translateX(-50%);
+      bottom: -10px;
+      right: 18px;
       width: 0;
       height: 0;
-      border-left: 8px solid transparent;
-      border-right: 8px solid transparent;
-      border-top: 8px solid rgba(200,200,200,0.5);
+      border-left: 9px solid transparent;
+      border-right: 9px solid transparent;
+      border-top: 10px solid #2A2A2A;
     `;
     this.element.appendChild(arrow);
 
@@ -57,13 +54,12 @@ export class Bubble {
     arrowInner.style.cssText = `
       position: absolute;
       bottom: -6px;
-      left: 50%;
-      transform: translateX(-50%);
+      right: 20px;
       width: 0;
       height: 0;
       border-left: 7px solid transparent;
       border-right: 7px solid transparent;
-      border-top: 7px solid rgba(255,255,255,0.9);
+      border-top: 7px solid #FFF9F2;
     `;
     this.element.appendChild(arrowInner);
 
@@ -85,7 +81,7 @@ export class Bubble {
 
     this.textNode.textContent = text;
     this.element.style.opacity = '1';
-    this.element.style.transform = 'translateX(-50%) translateY(-5px)';
+    this.element.style.transform = 'translateY(-5px)';
 
     if (duration > 0) {
       this.hideTimer = setTimeout(() => this.hide(), duration);
@@ -97,7 +93,7 @@ export class Bubble {
    */
   hide() {
     this.element.style.opacity = '0';
-    this.element.style.transform = 'translateX(-50%) translateY(0)';
+    this.element.style.transform = 'translateY(0)';
     if (this.hideTimer) {
       clearTimeout(this.hideTimer);
       this.hideTimer = null;
