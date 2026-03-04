@@ -31,6 +31,8 @@ import { SkillUnlockSystem } from './pet/SkillUnlockSystem.js';
 import { AgentConnections } from './ui/AgentConnections.js';
 import { AgentStatsTracker } from './pet/AgentStatsTracker.js';
 import { AchievementSystem } from './pet/AchievementSystem.js';
+import { StreamingBubble } from './ui/StreamingBubble.js';
+import { BottomChatInput } from './ui/BottomChatInput.js';
 
 class OpenClawPet {
   constructor() {
@@ -72,6 +74,8 @@ class OpenClawPet {
     this.agentConnections = null;
     this.agentStatsTracker = null;
     this.achievementSystem = null;
+    this.streamingBubble = null;
+    this.bottomChatInput = null;
 
     this._lastTime = 0;
     this._chatCompletionCount = 0;
@@ -160,8 +164,15 @@ class OpenClawPet {
 
     // 6. UI 组件
     this.bubble = new Bubble(this.bubbleContainer);
+    this.streamingBubble = new StreamingBubble(this.bubbleContainer, this.bubble);
     this.chatPanel = new ChatPanel(this.electronAPI, this.stateMachine, this.bubble);
     this.settingsPanel = new SettingsPanel(this.electronAPI);
+
+    // 6a2. 底部快捷聊天
+    this.bottomChatInput = new BottomChatInput(
+      document.getElementById('pet-area'),
+      this.electronAPI, this.stateMachine, this.streamingBubble
+    );
 
     // 6b. 文件拖拽分析（需在 bubble/chatPanel 初始化之后）
     this.fileDropHandler = new FileDropHandler(
@@ -171,7 +182,7 @@ class OpenClawPet {
 
     // 6d. 边缘反应
     this.behaviors.onEdgeReaction((edge) => {
-      if (this.bubble.isVisible()) return;
+      if (this.bubble.isVisible() || this.streamingBubble?.isVisible()) return;
       const msgs = {
         left: ['撞到了喵！>_<', '这边走不了了...', '哎呀，墙壁！'],
         right: ['到头了喵！', '碰壁了！>_<', '(碰) 好疼~'],
@@ -287,6 +298,7 @@ class OpenClawPet {
         onDoubleClick: () => {
           if (this.settingsPanel.isOpen) this.settingsPanel.close();
           if (this.skillPanel.isOpen) this.skillPanel.close();
+          if (this.bottomChatInput.isOpen) this.bottomChatInput.close();
           this.chatPanel.toggle();
         },
         onLongPress: () => {
@@ -408,7 +420,9 @@ class OpenClawPet {
       const idleMs = Date.now() - (this.behaviors.lastInteractionTime || Date.now());
       if (idleMs < 10 * 60 * 1000) return;        // 不足 10 分钟不触发
       if (this.bubble.isVisible()) return;          // 气泡正显示时不打扰
+      if (this.streamingBubble?.isVisible()) return; // 流式回复中不打扰
       if (this.chatPanel.isOpen) return;            // 聊天中不触发
+      if (this.bottomChatInput?.isOpen) return;     // 底部输入中不触发
 
       const msgs = [
         '主人~ 还在吗？(=TωT=)',
@@ -434,8 +448,10 @@ class OpenClawPet {
       const skillPanel = document.getElementById('skill-panel');
       // mini-cat 元素也需要阻止穿透
       const miniCatEl = e.target.closest?.('.mini-cat');
+      const bottomChatEl = e.target.closest?.('.bottom-chat-input.open') || e.target.closest?.('.bottom-chat-toggle');
       const isOverPanel =
         !!miniCatEl ||
+        !!bottomChatEl ||
         (chatPanel?.classList.contains('open') && chatPanel.contains(e.target)) ||
         (settingsPanel?.classList.contains('open') && settingsPanel.contains(e.target)) ||
         (skillPanel?.classList.contains('open') && skillPanel.contains(e.target));
@@ -655,6 +671,7 @@ class OpenClawPet {
   _startMainLoop() {
     this._running = true;
     this._lastTime = performance.now();
+    let iconUpdateCounter = 0;
 
     const loop = (timestamp) => {
       if (!this._running) return;
@@ -666,10 +683,33 @@ class OpenClawPet {
       this.behaviors.update(deltaMs);
       this.moodSystem.update(deltaMs);
 
+      // 每 ~30 帧更新一次图标/朝向（避免每帧查询）
+      if (++iconUpdateCounter >= 30) {
+        iconUpdateCounter = 0;
+        this._updateSideByPosition();
+      }
+
       requestAnimationFrame(loop);
     };
 
     requestAnimationFrame(loop);
+  }
+
+  /** 根据窗口在屏幕的位置更新图标侧和宠物朝向 */
+  async _updateSideByPosition() {
+    if (!this.electronAPI?.getWindowPosition || !this.electronAPI?.getScreenSize) return;
+    try {
+      const pos = await this.electronAPI.getWindowPosition();
+      const scr = await this.electronAPI.getScreenSize();
+      const centerX = pos.x + 128; // 窗口中心
+      const isOnRight = centerX > scr.width / 2;
+      const side = isOnRight ? 'left' : 'right';
+      this.bottomChatInput?.updateSide(side);
+      // 宠物面向屏幕中心（走动时由 Behaviors 控制，不覆盖）
+      if (this.stateMachine.getState() !== 'walk') {
+        this.renderer?.setFlipX(isOnRight);
+      }
+    } catch {}
   }
 
   _showFallback() {
@@ -700,6 +740,8 @@ class OpenClawPet {
     this.skillUnlockSystem = null;
     this.agentStatsTracker = null;
     this.achievementSystem = null;
+    this.bottomChatInput?.destroy();
+    this.streamingBubble?.destroy();
     this.bubble?.destroy();
     this.chatPanel?.destroy();
     this.settingsPanel?.destroy();
