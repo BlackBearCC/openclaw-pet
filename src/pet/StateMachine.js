@@ -25,18 +25,19 @@ export class StateMachine {
   }
 
   _buildTransitions() {
-    const fromIdle = ['walk', 'sit', 'sleep', 'drag', 'click_react', 'talk', 'happy', 'sad', 'idle2', 'idle3', 'eat', 'edge_idle'];
+    const fromIdle = ['walk', 'sit', 'sleep', 'work', 'drag', 'click_react', 'talk', 'happy', 'sad', 'idle2', 'idle3', 'eat', 'edge_idle'];
     const interruptible = ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad'];
     return {
       idle:        fromIdle,
-      idle2:       ['idle', ...interruptible, 'eat', 'edge_idle'],
-      idle3:       ['idle', ...interruptible, 'eat', 'edge_idle'],
-      walk:        ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad', 'eat', 'edge_idle'],
-      sit:         ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad', 'eat', 'edge_idle'],
-      sleep:       ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad', 'eat', 'edge_idle'],
+      idle2:       ['idle', ...interruptible, 'eat', 'edge_idle', 'work'],
+      idle3:       ['idle', ...interruptible, 'eat', 'edge_idle', 'work'],
+      walk:        ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad', 'eat', 'edge_idle', 'work'],
+      sit:         ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad', 'eat', 'edge_idle', 'work'],
+      sleep:       ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad', 'eat', 'edge_idle', 'work'],
+      work:        ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad', 'eat', 'edge_idle'],
       drag:        ['idle', 'edge_idle'],
-      click_react: ['idle', 'walk', 'sit', 'sleep', 'edge_idle'],
-      talk:        ['idle', 'edge_idle'],
+      click_react: ['idle', 'walk', 'sit', 'sleep', 'edge_idle', 'work'],
+      talk:        ['idle', 'edge_idle', 'work'],
       happy:       ['idle', 'edge_idle'],
       sad:         ['idle', 'edge_idle'],
       eat:         ['idle', 'happy', 'edge_idle'],
@@ -99,7 +100,7 @@ export class StateMachine {
    */
   _getReturnState() {
     // 临时状态结束后返回 idle
-    const tempStates = ['click_react', 'happy', 'sad', 'talk', 'drag', 'idle2', 'idle3', 'eat', 'edge_idle'];
+    const tempStates = ['click_react', 'happy', 'sad', 'talk', 'drag', 'idle2', 'idle3', 'eat', 'edge_idle', 'work'];
     if (tempStates.includes(this.previousState)) {
       return 'idle';
     }

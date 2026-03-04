@@ -31,10 +31,12 @@ export class SpriteSheet {
   _loadImage(src) {
     return new Promise((resolve, reject) => {
       const img = new Image();
-      img.onload = () => {
+      img.onload = async () => {
         // Chroma key: remove green background and make it transparent
         const processed = this._removeGreenBackground(img);
-        resolve(processed);
+        // 转为 ImageBitmap 释放大 canvas 内存，GPU 友好
+        const bitmap = await createImageBitmap(processed);
+        resolve(bitmap);
       };
       img.onerror = (e) => reject(new Error(`Failed to load spritesheet: ${src}`));
       img.src = src;

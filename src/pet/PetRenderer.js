@@ -18,7 +18,7 @@ export class PetRenderer {
    */
   constructor(canvas, spriteSheet, spriteSheetKitten, renderSize = 128) {
     this.canvas = canvas;
-    this.ctx = canvas.getContext('2d', { willReadFrequently: true });
+    this.ctx = canvas.getContext('2d');
     this.spriteSheet = spriteSheet;
     this.spriteSheetKitten = spriteSheetKitten;
     this.renderSize = renderSize;
@@ -48,9 +48,34 @@ export class PetRenderer {
     this.overlayDrawFn = null;   // 兼容旧 API
     this._overlays = [];         // 多 overlay 数组
 
+    // 额外 spritesheet 映射：animationName → SpriteSheet
+    this._extraSheets = new Map();
+
+    // 复合动画（enter→loop）：stateName → { enter, loop }
+    this._compoundAnims = new Map();
+
     // 高清素材：启用平滑缩放
     this.ctx.imageSmoothingEnabled = true;
     this.ctx.imageSmoothingQuality = 'high';
+  }
+
+  /**
+   * 注册额外的 spritesheet（用于特定动画）
+   * @param {string} animationName - 动画名（需与 JSON 中定义的一致）
+   * @param {import('./SpriteSheet').SpriteSheet} sheet
+   */
+  registerSheet(animationName, sheet) {
+    this._extraSheets.set(animationName, sheet);
+  }
+
+  /**
+   * 注册复合动画（enter→loop 自动衔接）
+   * @param {string} stateName - 状态名（如 'sleep'）
+   * @param {string} enterAnim - 进入动画名（如 'sleep_enter'）
+   * @param {string} loopAnim - 循环动画名（如 'sleep_loop'）
+   */
+  registerCompound(stateName, enterAnim, loopAnim) {
+    this._compoundAnims.set(stateName, { enter: enterAnim, loop: loopAnim });
   }
 
   /**
@@ -77,9 +102,16 @@ export class PetRenderer {
     const animMap = { edge_idle: 'sit' };
     const resolved = animMap[animationName] || animationName;
 
+    // 复合动画：自动播放 enter 部分
+    const compound = this._compoundAnims.get(resolved);
+    if (compound && this.currentAnimation !== compound.enter && this.currentAnimation !== compound.loop) {
+      this._playCompoundEnter(compound);
+      return;
+    }
+
     if (this.currentAnimation === resolved && !resetFrame) return;
 
-    const sheet = this._getActiveSheet();
+    const sheet = this._getSheetForAnimation(resolved);
     const anim = sheet.getAnimation(resolved);
     if (!anim) {
       console.warn(`Animation "${animationName}" not found, keeping current`);
@@ -93,12 +125,55 @@ export class PetRenderer {
     }
   }
 
-  /** 根据成长阶段选择当前使用的 spritesheet */
-  _getActiveSheet() {
+  /**
+   * 播放复合动画的 enter 部分，结束后自动切换到 loop
+   */
+  _playCompoundEnter(compound) {
+    const sheet = this._getSheetForAnimation(compound.enter);
+    const anim = sheet.getAnimation(compound.enter);
+    if (!anim) {
+      // enter 动画不存在，直接播放 loop
+      this.currentAnimation = compound.loop;
+      this.currentFrame = 0;
+      this.frameAccumulator = 0;
+      return;
+    }
+
+    this.currentAnimation = compound.enter;
+    this.currentFrame = 0;
+    this.frameAccumulator = 0;
+
+    // 保存原来的回调，设置 enter→loop 衔接
+    const prevCallback = this.onAnimationEnd;
+    this.onAnimationEnd = (animName) => {
+      if (animName === compound.enter) {
+        // enter 播完，切到 loop
+        this.currentAnimation = compound.loop;
+        this.currentFrame = 0;
+        this.frameAccumulator = 0;
+        this.onAnimationEnd = prevCallback;
+      }
+    };
+  }
+
+  /** 根据动画名获取对应的 spritesheet */
+  _getSheetForAnimation(animName) {
+    const extra = this._extraSheets.get(animName);
+    if (extra?.loaded) return extra;
+    return this._getDefaultSheet();
+  }
+
+  /** 根据成长阶段选择默认 spritesheet */
+  _getDefaultSheet() {
     if (this._growthStage === 0 && this.spriteSheetKitten?.loaded) {
       return this.spriteSheetKitten;
     }
     return this.spriteSheet;
+  }
+
+  /** 获取当前动画使用的 spritesheet */
+  _getActiveSheet() {
+    return this._getSheetForAnimation(this.currentAnimation);
   }
 
   /**

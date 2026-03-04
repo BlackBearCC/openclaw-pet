@@ -11,7 +11,12 @@
     "dist": "electron-builder",
     "test": "node --experimental-vm-modules node_modules/.bin/jest"
   },
-  "keywords": ["openclaw", "desktop-pet", "electron", "ai-assistant"],
+  "keywords": [
+    "openclaw",
+    "desktop-pet",
+    "electron",
+    "ai-assistant"
+  ],
   "license": "MIT",
   "dependencies": {
     "openclaw": "latest"
@@ -37,12 +42,19 @@
       {
         "from": "node_modules/openclaw",
         "to": "resources/openclaw",
-        "filter": ["**/*", "!docs/**", "!*.test.js", "!apps/**"]
+        "filter": [
+          "**/*",
+          "!docs/**",
+          "!*.test.js",
+          "!apps/**"
+        ]
       },
       {
         "from": "node_modules/.bin",
         "to": "resources/bin",
-        "filter": ["openclaw*"]
+        "filter": [
+          "openclaw*"
+        ]
       }
     ],
     "win": {
