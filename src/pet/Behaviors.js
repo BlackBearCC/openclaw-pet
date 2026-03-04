@@ -195,12 +195,21 @@ export class Behaviors {
     this.idleVariantTimer = setTimeout(() => {
       if (this.isActive && this.sm.getState() === 'idle' && !this.sm.isLocked()) {
         const roll = Math.random();
-        if (roll < 0.5) {
+        if (roll < 0.3) {
           // idle2: 耳朵抖动，持续 2-3s
           this.sm.transition('idle2', { duration: 2000 + Math.random() * 1000 });
-        } else {
+        } else if (roll < 0.55) {
           // idle3: 哈欠，持续 1.5-2.5s
           this.sm.transition('idle3', { duration: 1500 + Math.random() * 1000 });
+        } else if (roll < 0.7) {
+          // idle_sneeze: 打喷嚏
+          this.sm.transition('idle_sneeze', { duration: 3000 });
+        } else if (roll < 0.85) {
+          // idle_trip: 绊倒
+          this.sm.transition('idle_trip', { duration: 3000 });
+        } else {
+          // idle_butterfly: 追蝴蝶
+          this.sm.transition('idle_butterfly', { duration: 3000 });
         }
       }
       this._scheduleIdleVariant();
