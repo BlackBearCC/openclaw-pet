@@ -55,6 +55,8 @@ class OpenClawPet {
     this.idleSneezeSheet = new SpriteSheet();
     this.idleTripSheet = new SpriteSheet();
     this.idleButterflySheet = new SpriteSheet();
+    this.idleEarTwitchSheet = new SpriteSheet();
+    this.idleYawnSheet = new SpriteSheet();
     this.stateMachine = new StateMachine();
     this.moodSystem = new MoodSystem();
     this.renderer = null;
@@ -123,6 +125,10 @@ class OpenClawPet {
           .catch(() => console.warn('⚠️ idle_trip spritesheet not found')),
         this.idleButterflySheet.load(spritePath + 'idle_butterfly.png', spritePath + 'idle_butterfly.json')
           .catch(() => console.warn('⚠️ idle_butterfly spritesheet not found')),
+        this.idleEarTwitchSheet.load(spritePath + 'idle_ear_twitch.png', spritePath + 'idle_ear_twitch.json')
+          .catch(() => console.warn('⚠️ idle_ear_twitch spritesheet not found')),
+        this.idleYawnSheet.load(spritePath + 'idle_yawn.png', spritePath + 'idle_yawn.json')
+          .catch(() => console.warn('⚠️ idle_yawn spritesheet not found')),
       ]);
       console.log('✅ Spritesheets loaded');
     } catch (e) {
@@ -151,6 +157,8 @@ class OpenClawPet {
     this.renderer.registerSheet('idle_sneeze', this.idleSneezeSheet);
     this.renderer.registerSheet('idle_trip', this.idleTripSheet);
     this.renderer.registerSheet('idle_butterfly', this.idleButterflySheet);
+    this.renderer.registerSheet('idle_ear_twitch', this.idleEarTwitchSheet);
+    this.renderer.registerSheet('idle_yawn', this.idleYawnSheet);
     this.renderer.registerCompound('sleep', 'sleep_enter', 'sleep_loop', 'sleep_exit');
     this.renderer.registerCompound('work', 'work_enter', 'work_loop', 'work_exit');
 
@@ -282,7 +290,7 @@ class OpenClawPet {
           `${file ? file + ' ' : ''}写代码好厉害！`,
         ];
         this.bubble.show(msgs[Math.floor(Math.random() * msgs.length)], 4000);
-        this.stateMachine.transition('idle2', { force: true, duration: 2000 });
+        this.stateMachine.transition('idle_ear_twitch', { force: true, duration: 2000 });
         return;
       }
       if (category === 'terminal' && project) {
@@ -578,7 +586,7 @@ class OpenClawPet {
 
       this._lastAppReaction = Date.now();
       this.bubble.show(pool[Math.floor(Math.random() * pool.length)], 4000);
-      this.stateMachine.transition('idle2', { force: true, duration: 2000 });
+      this.stateMachine.transition('idle_ear_twitch', { force: true, duration: 2000 });
 
       // 工作区感知（精准项目/文件信息）
       this.workspaceWatcher?.handleAppChange(data);
@@ -639,7 +647,7 @@ class OpenClawPet {
       // 3. 生命周期 → 宠物动画 + Agent 完成追踪
       if (event.stream === 'lifecycle') {
         if (event.data?.phase === 'thinking' || event.data?.phase === 'running') {
-          const interruptible = ['idle', 'idle2', 'idle3', 'walk', 'sit', 'sleep'];
+          const interruptible = ['idle', 'idle_ear_twitch', 'idle_yawn', 'walk', 'sit', 'sleep'];
           if (interruptible.includes(this.stateMachine.currentState)) {
             this.stateMachine.transition('work', { force: true });
           }
@@ -669,7 +677,7 @@ class OpenClawPet {
       if (!hint) return;
       this._pendingClipboard = data.text;
       this.bubble.show(hint, 6000);
-      this.stateMachine.transition('idle2', { force: true, duration: 2000 }); // 侧耳倾听
+      this.stateMachine.transition('idle_ear_twitch', { force: true, duration: 2000 }); // 侧耳倾听
     });
   }
 

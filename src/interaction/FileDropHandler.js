@@ -54,7 +54,7 @@ export class FileDropHandler {
     this.electronAPI?.setIgnoreMouse?.(false);
 
     // 好奇姿势
-    this.sm.transition('idle2', { force: true });
+    this.sm.transition('idle_ear_twitch', { force: true });
     this.bubble.show('放到我这里~ 我来帮你看看！', 3000);
   }
 

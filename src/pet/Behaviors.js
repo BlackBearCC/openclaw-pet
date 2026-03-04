@@ -185,7 +185,7 @@ export class Behaviors {
 
   /**
    * 定期在三种 idle 变体之间随机切换
-   * idle → idle2（耳朵抖动）→ idle → idle3（哈欠）→ idle → ...
+   * idle → idle_ear_twitch（耳朵抖动）→ idle → idle_yawn（哈欠）→ idle → ...
    */
   _scheduleIdleVariant() {
     if (!this.isActive) return;
@@ -196,11 +196,11 @@ export class Behaviors {
       if (this.isActive && this.sm.getState() === 'idle' && !this.sm.isLocked()) {
         const roll = Math.random();
         if (roll < 0.3) {
-          // idle2: 耳朵抖动，持续 2-3s
-          this.sm.transition('idle2', { duration: 2000 + Math.random() * 1000 });
+          // idle_ear_twitch: 耳朵抖动歪头
+          this.sm.transition('idle_ear_twitch', { duration: 3000 });
         } else if (roll < 0.55) {
-          // idle3: 哈欠，持续 1.5-2.5s
-          this.sm.transition('idle3', { duration: 1500 + Math.random() * 1000 });
+          // idle_yawn: 打哈欠伸懒腰
+          this.sm.transition('idle_yawn', { duration: 3000 });
         } else if (roll < 0.7) {
           // idle_sneeze: 打喷嚏
           this.sm.transition('idle_sneeze', { duration: 3000 });
