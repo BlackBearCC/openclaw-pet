@@ -16,7 +16,6 @@ export class StreamingBubble {
     this.petArea = petArea;
     this.simpleBubble = simpleBubble;
 
-    this.maxVisibleSegments = 4;
     this.segments = [];        // { el, text }
     this.pendingText = '';     // 未到标点的缓冲
     this.lastFullText = '';    // 上次 appendText 收到的全文（用于 diff）
@@ -70,9 +69,6 @@ export class StreamingBubble {
       this._promoteCurrentSegment(rest);
     }
     this._removeCurrentEl();
-
-    // 15 秒后自动隐藏
-    this.hideTimer = setTimeout(() => this._fadeOutAll(), 15000);
   }
 
   /** 是否正在展示 */
@@ -81,6 +77,9 @@ export class StreamingBubble {
   /** 清除所有段 */
   clear() {
     this._clearHideTimer();
+    for (const seg of this.segments) {
+      if (seg.timer) clearTimeout(seg.timer);
+    }
     this.segments = [];
     this.pendingText = '';
     this.lastFullText = '';
@@ -121,15 +120,14 @@ export class StreamingBubble {
     el.className = 'stream-segment';
     el.textContent = text;
     this.wrapEl.appendChild(el);
-    this.segments.push({ el, text });
+    const seg = { el, text, timer: null };
+    this.segments.push(seg);
 
     // 触发入场动画
     requestAnimationFrame(() => el.classList.add('visible'));
 
-    // 超出上限 → 退休最老的
-    while (this.segments.length > this.maxVisibleSegments) {
-      this._retireOldest();
-    }
+    // 5 秒后自动退休
+    seg.timer = setTimeout(() => this._retireSegment(seg), 5000);
   }
 
   /** 更新正在打字的临时段 */
@@ -150,25 +148,19 @@ export class StreamingBubble {
     }
   }
 
-  /** 最老的段缩小淡出 */
-  _retireOldest() {
-    const oldest = this.segments.shift();
-    if (!oldest) return;
-    oldest.el.classList.add('retiring');
-    oldest.el.addEventListener('transitionend', () => oldest.el.remove(), { once: true });
-    // 保底移除（万一 transitionend 不触发）
-    setTimeout(() => { if (oldest.el.parentNode) oldest.el.remove(); }, 600);
-  }
+  /** 指定段缩小淡出 */
+  _retireSegment(seg) {
+    const idx = this.segments.indexOf(seg);
+    if (idx >= 0) this.segments.splice(idx, 1);
+    seg.el.classList.add('retiring');
+    setTimeout(() => { if (seg.el.parentNode) seg.el.remove(); }, 600);
 
-  /** 全部淡出 */
-  _fadeOutAll() {
-    // 所有段同时淡出
-    for (const { el } of this.segments) {
-      el.classList.add('retiring');
+    // 所有段都退完且流已结束 → 隐藏容器
+    if (this.segments.length === 0 && !this.currentEl) {
+      setTimeout(() => {
+        if (this.segments.length === 0) this.clear();
+      }, 700);
     }
-    if (this.currentEl) this.currentEl.classList.add('retiring');
-
-    setTimeout(() => this.clear(), 600);
   }
 
   _clearHideTimer() {

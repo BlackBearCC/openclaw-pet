@@ -1225,15 +1225,13 @@ html, body {
 
 .stream-segments-container {
   position: absolute;
-  top: 0;
+  bottom: 190px;
   left: 5px;
   right: 5px;
-  max-height: 160px;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   gap: 4px;
-  overflow: hidden;
   pointer-events: none;
   z-index: 25;
 }
