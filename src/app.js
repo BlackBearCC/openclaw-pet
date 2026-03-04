@@ -43,8 +43,10 @@ class OpenClawPet {
     // 额外动画 spritesheets
     this.sleepEnterSheet = new SpriteSheet();
     this.sleepLoopSheet = new SpriteSheet();
+    this.sleepExitSheet = new SpriteSheet();
     this.workEnterSheet = new SpriteSheet();
     this.workLoopSheet = new SpriteSheet();
+    this.workExitSheet = new SpriteSheet();
     this.clickReactSheet = new SpriteSheet();
     this.dragSheet = new SpriteSheet();
     this.happySheet = new SpriteSheet();
@@ -94,10 +96,14 @@ class OpenClawPet {
           .catch(() => console.warn('⚠️ sleep_enter spritesheet not found')),
         this.sleepLoopSheet.load(spritePath + 'sleep_loop.png', spritePath + 'sleep_loop.json')
           .catch(() => console.warn('⚠️ sleep_loop spritesheet not found')),
+        this.sleepExitSheet.load(spritePath + 'sleep_exit.png', spritePath + 'sleep_exit.json')
+          .catch(() => console.warn('⚠️ sleep_exit spritesheet not found')),
         this.workEnterSheet.load(spritePath + 'work_enter.png', spritePath + 'work_enter.json')
           .catch(() => console.warn('⚠️ work_enter spritesheet not found')),
         this.workLoopSheet.load(spritePath + 'work_loop.png', spritePath + 'work_loop.json')
           .catch(() => console.warn('⚠️ work_loop spritesheet not found')),
+        this.workExitSheet.load(spritePath + 'work_exit.png', spritePath + 'work_exit.json')
+          .catch(() => console.warn('⚠️ work_exit spritesheet not found')),
         this.clickReactSheet.load(spritePath + 'click_react.png', spritePath + 'click_react.json')
           .catch(() => console.warn('⚠️ click_react spritesheet not found')),
         this.dragSheet.load(spritePath + 'drag.png', spritePath + 'drag.json')
@@ -122,13 +128,15 @@ class OpenClawPet {
     // 3a. 注册额外 spritesheet 和复合动画
     this.renderer.registerSheet('sleep_enter', this.sleepEnterSheet);
     this.renderer.registerSheet('sleep_loop', this.sleepLoopSheet);
+    this.renderer.registerSheet('sleep_exit', this.sleepExitSheet);
     this.renderer.registerSheet('work_enter', this.workEnterSheet);
     this.renderer.registerSheet('work_loop', this.workLoopSheet);
+    this.renderer.registerSheet('work_exit', this.workExitSheet);
     this.renderer.registerSheet('click_react', this.clickReactSheet);
     this.renderer.registerSheet('drag', this.dragSheet);
     this.renderer.registerSheet('happy', this.happySheet);
-    this.renderer.registerCompound('sleep', 'sleep_enter', 'sleep_loop');
-    this.renderer.registerCompound('work', 'work_enter', 'work_loop');
+    this.renderer.registerCompound('sleep', 'sleep_enter', 'sleep_loop', 'sleep_exit');
+    this.renderer.registerCompound('work', 'work_enter', 'work_loop', 'work_exit');
 
     // 3b. 喂食动画
     this.feedingAnimator = new FeedingAnimator(this.renderer, this.stateMachine);
