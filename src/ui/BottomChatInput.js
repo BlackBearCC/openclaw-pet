@@ -73,10 +73,6 @@ export class BottomChatInput {
     this.isOpen = true;
     this.barEl.classList.add('open');
     this.toggleBtn.classList.add('active');
-    // 扩展窗口（向上微扩 54px）
-    if (this.electronAPI?.expandWindow) {
-      this.electronAPI.expandWindow(true, { width: 256, height: 310 });
-    }
     setTimeout(() => this.inputEl.focus(), 260);
   }
 
@@ -86,9 +82,6 @@ export class BottomChatInput {
     this.barEl.classList.remove('open');
     this.toggleBtn.classList.remove('active');
     this.inputEl.value = '';
-    if (this.electronAPI?.expandWindow) {
-      this.electronAPI.expandWindow(false);
-    }
   }
 
   toggle() {

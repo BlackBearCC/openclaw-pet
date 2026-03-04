@@ -92,9 +92,9 @@ html, body {
 /* ===== 气泡 ===== */
 #bubble-container {
   position: absolute;
-  top: 15px;
+  bottom: 260px;
   left: 5px;
-  width: 180px;
+  width: 200px;
   pointer-events: none;
   z-index: 20;
 }
@@ -1108,7 +1108,7 @@ html, body {
 
 .bottom-chat-toggle {
   position: absolute;
-  bottom: 8px;
+  bottom: 4px;
   left: 4px;
   width: 32px;
   height: 32px;
@@ -1147,9 +1147,9 @@ html, body {
 /* 输入栏 */
 .bottom-chat-input {
   position: absolute;
-  bottom: -46px;
+  bottom: 44px;
   left: 0;
-  width: 220px;
+  width: 240px;
   display: flex;
   gap: 6px;
   padding: 6px 8px;
