@@ -1224,14 +1224,24 @@ html, body {
    ============================================= */
 
 .stream-segments-container {
+  position: absolute;
+  bottom: 60px;
+  left: -180px;  /* 默认在角色左侧 */
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
+  align-items: flex-end;
   gap: 4px;
   max-height: 200px;
   overflow: hidden;
-  width: 100%;
+  width: 170px;
   pointer-events: none;
+  z-index: 20;
+}
+.stream-segments-container.right {
+  left: auto;
+  right: -180px;
+  align-items: flex-start;
 }
 
 .stream-segment {

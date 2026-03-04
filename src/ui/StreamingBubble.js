@@ -1,17 +1,19 @@
 /**
  * StreamingBubble.js
  * 流式多段气泡 — AI 回复按标点分段，逐段浮现，旧段缩小淡出上移
+ *
+ * 位置跟随宠物屏幕侧：左侧→气泡在右，右侧→气泡在左
  */
 
 import { splitAtPunctuation } from '../utils/textSplitter.js';
 
 export class StreamingBubble {
   /**
-   * @param {HTMLElement} container - #bubble-container
+   * @param {HTMLElement} petArea - #pet-area
    * @param {import('./Bubble').Bubble} simpleBubble - 普通气泡（流式期间隐藏）
    */
-  constructor(container, simpleBubble) {
-    this.container = container;
+  constructor(petArea, simpleBubble) {
+    this.petArea = petArea;
     this.simpleBubble = simpleBubble;
 
     this.maxVisibleSegments = 4;
@@ -20,15 +22,23 @@ export class StreamingBubble {
     this.lastFullText = '';    // 上次 appendText 收到的全文（用于 diff）
     this.isActive = false;
     this.hideTimer = null;
+    this._side = 'left'; // 气泡在角色的哪一侧
 
-    // 容器 DOM
+    // 容器 DOM — 直接挂在 pet-area 上，不在 bubble-container 里
     this.wrapEl = document.createElement('div');
     this.wrapEl.className = 'stream-segments-container';
     this.wrapEl.style.display = 'none';
-    this.container.appendChild(this.wrapEl);
+    this.petArea.appendChild(this.wrapEl);
 
     // 当前正在打字的段
     this.currentEl = null;
+  }
+
+  /** 更新气泡位置（由 app.js 调用） */
+  updateSide(side) {
+    if (side === this._side) return;
+    this._side = side;
+    this.wrapEl.classList.toggle('right', side === 'right');
   }
 
   /** 开始新一轮流式输出 */
@@ -66,8 +76,8 @@ export class StreamingBubble {
     }
     this._removeCurrentEl();
 
-    // 8 秒后自动隐藏
-    this.hideTimer = setTimeout(() => this._fadeOutAll(), 8000);
+    // 15 秒后自动隐藏
+    this.hideTimer = setTimeout(() => this._fadeOutAll(), 15000);
   }
 
   /** 是否正在展示 */

@@ -91,8 +91,8 @@ export class ChatPanel {
     this.electronAPI.onChatStream((payload) => {
       if (!payload) return;
 
-      // 只处理当前活跃 run 的事件
-      if (this.activeRunId && payload.runId !== this.activeRunId) return;
+      // 只处理当前活跃 run 的事件（无 activeRunId 时跳过）
+      if (!this.activeRunId || payload.runId !== this.activeRunId) return;
 
       if (payload.state === 'delta') {
         const text = this._extractText(payload.message);

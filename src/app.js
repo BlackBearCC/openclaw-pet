@@ -176,7 +176,7 @@ class OpenClawPet {
 
     // 6. UI 组件
     this.bubble = new Bubble(this.bubbleContainer);
-    this.streamingBubble = new StreamingBubble(this.bubbleContainer, this.bubble);
+    this.streamingBubble = new StreamingBubble(document.getElementById('pet-area'), this.bubble);
     this.chatPanel = new ChatPanel(this.electronAPI, this.stateMachine, this.bubble);
     this.settingsPanel = new SettingsPanel(this.electronAPI);
 
@@ -717,6 +717,7 @@ class OpenClawPet {
       const isOnRight = centerX > scr.width / 2;
       const side = isOnRight ? 'left' : 'right';
       this.bottomChatInput?.updateSide(side);
+      this.streamingBubble?.updateSide(side);
       // 宠物面向屏幕中心（走动时由 Behaviors 控制，不覆盖）
       if (this.stateMachine.getState() !== 'walk') {
         this.renderer?.setFlipX(isOnRight);
