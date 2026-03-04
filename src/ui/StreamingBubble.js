@@ -2,7 +2,7 @@
  * StreamingBubble.js
  * 流式多段气泡 — AI 回复按标点分段，逐段浮现，旧段缩小淡出上移
  *
- * 位置跟随宠物屏幕侧：左侧→气泡在右，右侧→气泡在左
+ * 位于宠物头顶，段从下往上堆叠
  */
 
 import { splitAtPunctuation } from '../utils/textSplitter.js';
@@ -22,9 +22,8 @@ export class StreamingBubble {
     this.lastFullText = '';    // 上次 appendText 收到的全文（用于 diff）
     this.isActive = false;
     this.hideTimer = null;
-    this._side = 'left'; // 气泡在角色的哪一侧
 
-    // 容器 DOM — 直接挂在 pet-area 上，不在 bubble-container 里
+    // 容器 DOM — 直接挂在 pet-area 上
     this.wrapEl = document.createElement('div');
     this.wrapEl.className = 'stream-segments-container';
     this.wrapEl.style.display = 'none';
@@ -34,12 +33,8 @@ export class StreamingBubble {
     this.currentEl = null;
   }
 
-  /** 更新气泡位置（由 app.js 调用） */
-  updateSide(side) {
-    if (side === this._side) return;
-    this._side = side;
-    this.wrapEl.classList.toggle('right', side === 'right');
-  }
+  /** 兼容调用（位置现在固定在头顶） */
+  updateSide() {}
 
   /** 开始新一轮流式输出 */
   start() {

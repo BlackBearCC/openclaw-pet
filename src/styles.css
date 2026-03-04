@@ -1225,37 +1225,32 @@ html, body {
 
 .stream-segments-container {
   position: absolute;
-  bottom: 60px;
-  left: -180px;  /* 默认在角色左侧 */
+  top: 0;
+  left: 5px;
+  right: 5px;
+  max-height: 160px;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  align-items: flex-end;
   gap: 4px;
-  max-height: 200px;
   overflow: hidden;
-  width: 170px;
   pointer-events: none;
-  z-index: 20;
-}
-.stream-segments-container.right {
-  left: auto;
-  right: -180px;
-  align-items: flex-start;
+  z-index: 25;
 }
 
 .stream-segment {
   background: var(--paper);
   border: 2.5px solid var(--ink);
   border-radius: 16px 4px 14px 6px / 6px 14px 4px 16px;
-  padding: 6px 10px;
-  font-size: 12px;
+  padding: 5px 8px;
+  font-size: 11px;
+  line-height: 1.4;
   font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
   font-weight: 600;
   color: var(--ink);
-  max-width: 170px;
+  max-width: 230px;
   word-wrap: break-word;
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
   white-space: pre-wrap;
   opacity: 0;
   transform: translateY(8px);
