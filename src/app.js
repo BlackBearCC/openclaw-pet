@@ -52,6 +52,9 @@ class OpenClawPet {
     this.clickReactSheet = new SpriteSheet();
     this.dragSheet = new SpriteSheet();
     this.happySheet = new SpriteSheet();
+    this.idleSneezeSheet = new SpriteSheet();
+    this.idleTripSheet = new SpriteSheet();
+    this.idleButterflySheet = new SpriteSheet();
     this.stateMachine = new StateMachine();
     this.moodSystem = new MoodSystem();
     this.renderer = null;
@@ -114,6 +117,12 @@ class OpenClawPet {
           .catch(() => console.warn('⚠️ drag spritesheet not found')),
         this.happySheet.load(spritePath + 'happy.png', spritePath + 'happy.json')
           .catch(() => console.warn('⚠️ happy spritesheet not found')),
+        this.idleSneezeSheet.load(spritePath + 'idle_sneeze.png', spritePath + 'idle_sneeze.json')
+          .catch(() => console.warn('⚠️ idle_sneeze spritesheet not found')),
+        this.idleTripSheet.load(spritePath + 'idle_trip.png', spritePath + 'idle_trip.json')
+          .catch(() => console.warn('⚠️ idle_trip spritesheet not found')),
+        this.idleButterflySheet.load(spritePath + 'idle_butterfly.png', spritePath + 'idle_butterfly.json')
+          .catch(() => console.warn('⚠️ idle_butterfly spritesheet not found')),
       ]);
       console.log('✅ Spritesheets loaded');
     } catch (e) {
@@ -139,6 +148,9 @@ class OpenClawPet {
     this.renderer.registerSheet('click_react', this.clickReactSheet);
     this.renderer.registerSheet('drag', this.dragSheet);
     this.renderer.registerSheet('happy', this.happySheet);
+    this.renderer.registerSheet('idle_sneeze', this.idleSneezeSheet);
+    this.renderer.registerSheet('idle_trip', this.idleTripSheet);
+    this.renderer.registerSheet('idle_butterfly', this.idleButterflySheet);
     this.renderer.registerCompound('sleep', 'sleep_enter', 'sleep_loop', 'sleep_exit');
     this.renderer.registerCompound('work', 'work_enter', 'work_loop', 'work_exit');
 
