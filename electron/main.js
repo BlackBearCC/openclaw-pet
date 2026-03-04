@@ -45,7 +45,7 @@ function detectClipboardType(text) {
 }
 
 // ===== 窗口尺寸 =====
-const PET_SIZE = { width: 280, height: 400 };
+const PET_SIZE = { width: 280, height: 580 };
 const EXPANDED_SIZE = { width: 576, height: 520 };
 
 function createWindow() {
