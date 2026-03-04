@@ -1272,3 +1272,28 @@ html, body {
   transition: all 0.5s ease-out !important;
   pointer-events: none;
 }
+
+/* 思考中省略号 */
+.thinking-dots {
+  font-size: 20px;
+  letter-spacing: 3px;
+  padding: 6px 14px;
+  line-height: 1;
+}
+.thinking-dots span {
+  display: inline-block;
+  animation: dotBounce 1.4s ease-in-out infinite;
+  font-weight: 900;
+  color: var(--ink);
+}
+.thinking-dots span:nth-child(1) { animation-delay: 0s; }
+.thinking-dots span:nth-child(2) { animation-delay: 0.12s; }
+.thinking-dots span:nth-child(3) { animation-delay: 0.24s; }
+.thinking-dots span:nth-child(4) { animation-delay: 0.36s; }
+.thinking-dots span:nth-child(5) { animation-delay: 0.48s; }
+.thinking-dots span:nth-child(6) { animation-delay: 0.6s; }
+
+@keyframes dotBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.3; }
+  30% { transform: translateY(-6px); opacity: 1; }
+}

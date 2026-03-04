@@ -48,6 +48,9 @@ export class StreamingBubble {
     this.isActive = true;
     this.wrapEl.style.display = '';
     if (this.simpleBubble) this.simpleBubble.hide();
+
+    // 思考中省略号
+    this._showThinkingDots();
   }
 
   /**
@@ -94,6 +97,7 @@ export class StreamingBubble {
     this.pendingText = '';
     this.lastFullText = '';
     this._lastPromoteTime = 0;
+    this._thinkingEl = null;
     this.currentEl = null;
     this.isActive = false;
     this.wrapEl.innerHTML = '';
@@ -148,8 +152,30 @@ export class StreamingBubble {
     }
   }
 
+  /** 显示思考中省略号 */
+  _showThinkingDots() {
+    this._thinkingEl = document.createElement('div');
+    this._thinkingEl.className = 'stream-segment thinking-dots';
+    this._thinkingEl.innerHTML = '<span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span>';
+    const tilt = (Math.random() - 0.5) * 4;
+    this._thinkingEl.style.setProperty('--tilt', `rotate(${tilt.toFixed(1)}deg)`);
+    this.wrapEl.appendChild(this._thinkingEl);
+    requestAnimationFrame(() => this._thinkingEl?.classList.add('visible'));
+  }
+
+  /** 移除思考省略号 */
+  _removeThinkingDots() {
+    if (this._thinkingEl) {
+      this._thinkingEl.classList.add('retiring');
+      const el = this._thinkingEl;
+      this._thinkingEl = null;
+      setTimeout(() => { if (el.parentNode) el.remove(); }, 500);
+    }
+  }
+
   /** 实际显示一个段 */
   _showSegment(text) {
+    this._removeThinkingDots();
     this._removeCurrentEl();
 
     const el = document.createElement('div');
