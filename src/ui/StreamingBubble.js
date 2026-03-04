@@ -16,6 +16,7 @@ export class StreamingBubble {
     this.petArea = petArea;
     this.simpleBubble = simpleBubble;
 
+    this.maxSegments = 8;
     this.segments = [];        // { el, text, timer }
     this.pendingText = '';     // 未到标点的缓冲
     this.lastFullText = '';    // 上次 appendText 收到的全文（用于 diff）
@@ -170,6 +171,13 @@ export class StreamingBubble {
 
     // 触发入场动画
     requestAnimationFrame(() => el.classList.add('visible'));
+
+    // 超出上限 → 立即退休最老的
+    while (this.segments.length > this.maxSegments) {
+      const oldest = this.segments[0];
+      if (oldest.timer) clearTimeout(oldest.timer);
+      this._retireSegment(oldest);
+    }
 
     // 5 秒后自动退休
     seg.timer = setTimeout(() => this._retireSegment(seg), 5000);
