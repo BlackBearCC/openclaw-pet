@@ -223,13 +223,13 @@ export class ChatPanel {
     const copyBtn = document.createElement('button');
     copyBtn.className = 'msg-copy-btn';
     copyBtn.title = '复制';
-    copyBtn.textContent = '⎘';
+    copyBtn.textContent = '\u{1F4CB}';
     copyBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       const raw = this._rawTextMap[id] || text;
       navigator.clipboard.writeText(raw).then(() => {
-        copyBtn.textContent = '✓';
-        setTimeout(() => { copyBtn.textContent = '⎘'; }, 1500);
+        copyBtn.textContent = '\u2713';
+        setTimeout(() => { copyBtn.textContent = '\u{1F4CB}'; }, 1500);
       });
     });
 

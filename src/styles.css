@@ -302,14 +302,15 @@ html, body {
   border: 1.5px solid var(--ink);
   border-radius: var(--radius-sketchy-sm);
   color: var(--ink);
-  font-size: 11px;
+  font-size: 13px;
   cursor: pointer;
-  padding: 1px 4px;
-  line-height: 1.4;
-  opacity: 0;
-  transition: opacity 0.15s ease;
+  padding: 2px 5px;
+  line-height: 1.2;
+  opacity: 0.45;
+  transition: opacity 0.15s ease, background 0.15s ease;
   user-select: none;
   box-shadow: 1px 1px 0 var(--ink);
+  z-index: 2;
 }
 
 .chat-msg:hover .msg-copy-btn {
@@ -319,6 +320,10 @@ html, body {
 .msg-copy-btn:hover {
   background: var(--clr-primary);
   color: white;
+}
+
+.msg-copy-btn:active {
+  transform: scale(0.9);
 }
 
 /* Markdown 渲染样式 */

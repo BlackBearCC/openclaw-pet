@@ -86,13 +86,13 @@ function _loadOrCreateDeviceIdentity() {
 
 // ===== AI Provider 预设 =====
 const AI_PROVIDERS = {
-  openai:     { label: 'OpenAI',        baseUrl: 'https://api.openai.com/v1',                       defaultModel: 'gpt-4o' },
-  bailian:    { label: '百炼 (Bailian)', baseUrl: 'https://coding.dashscope.aliyuncs.com/v1',           defaultModel: 'kimi-k2.5' },
-  doubao:     { label: '豆包 (Doubao)',  baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',        defaultModel: 'doubao-1-5-pro-32k-250115' },
-  deepseek:   { label: 'DeepSeek',      baseUrl: 'https://api.deepseek.com/v1',                     defaultModel: 'deepseek-chat' },
-  moonshot:   { label: 'Moonshot',      baseUrl: 'https://api.moonshot.cn/v1',                      defaultModel: 'moonshot-v1-8k' },
-  qwen:       { label: '通义千问',       baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', defaultModel: 'qwen-plus' },
-  custom:     { label: '自定义',         baseUrl: '',                                                  defaultModel: '' },
+  openai:     { label: 'OpenAI',        baseUrl: 'https://api.openai.com/v1',                       defaultModel: 'gpt-4o',                       api: 'openai-completions' },
+  bailian:    { label: '百炼 (Bailian)', baseUrl: 'https://coding.dashscope.aliyuncs.com/v1',           defaultModel: 'kimi-k2.5',                    api: 'openai-completions' },
+  doubao:     { label: '豆包 (Doubao)',  baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',        defaultModel: 'doubao-1-5-pro-32k-250115',    api: 'openai-completions' },
+  deepseek:   { label: 'DeepSeek',      baseUrl: 'https://api.deepseek.com/v1',                     defaultModel: 'deepseek-chat',                api: 'openai-completions' },
+  moonshot:   { label: 'Moonshot',      baseUrl: 'https://api.moonshot.cn/v1',                      defaultModel: 'moonshot-v1-8k',               api: 'openai-completions' },
+  qwen:       { label: '通义千问',       baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', defaultModel: 'qwen-plus',                    api: 'openai-completions' },
+  custom:     { label: '自定义',         baseUrl: '',                                                  defaultModel: '',                             api: 'openai-completions' },
 };
 
 class LLMService {
@@ -145,6 +145,11 @@ class LLMService {
   async init() {
     this.configPath = path.join(app.getPath('userData'), 'openclaw-pet-config.json');
     this._loadConfig();
+    // 自动同步 AI 配置到 OpenClaw Gateway 配置
+    if (this.config.aiProvider && this.config.aiApiKey) {
+      this.writeOpenClawConfig(this.config);
+      console.log('[llm] Auto-synced AI config to OpenClaw Gateway');
+    }
     try { this.deviceIdentity = _loadOrCreateDeviceIdentity(); } catch (e) {
       console.warn('[llm] Failed to load device identity:', e.message);
     }
@@ -785,14 +790,21 @@ class LLMService {
 
         const providerKey = aiConfig.aiProvider === 'custom' ? 'custom' : aiConfig.aiProvider;
         const providerInfo = AI_PROVIDERS[aiConfig.aiProvider] || {};
+        const modelName = aiConfig.aiModel || providerInfo.defaultModel || '';
+        const apiType = providerInfo.api || 'openai-completions';
 
         config.models.providers[providerKey] = {
-          kind: 'openai',
           baseUrl: aiConfig.aiBaseUrl || providerInfo.baseUrl || '',
+          api: apiType,
           apiKey: aiConfig.aiApiKey,
+          models: modelName ? [{
+            id: modelName,
+            name: modelName,
+            contextWindow: 131072,
+            maxTokens: 8192,
+          }] : [],
         };
 
-        const modelName = aiConfig.aiModel || providerInfo.defaultModel || '';
         if (modelName) {
           if (!config.agents) config.agents = {};
           if (!config.agents.defaults) config.agents.defaults = {};
