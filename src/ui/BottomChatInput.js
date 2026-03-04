@@ -101,8 +101,10 @@ export class BottomChatInput {
     if (!this.electronAPI?.onChatStream) return;
 
     this.electronAPI.onChatStream((payload) => {
-      if (!payload || !this.activeRunId) return;
-      if (payload.runId !== this.activeRunId) return;
+      if (!payload || !this.isSending) return;
+      // activeRunId 可能因竞态尚未设置，从首个事件捕获
+      if (this.activeRunId && payload.runId !== this.activeRunId) return;
+      if (!this.activeRunId && payload.runId) this.activeRunId = payload.runId;
 
       if (payload.state === 'delta') {
         const text = this._extractText(payload.message);
