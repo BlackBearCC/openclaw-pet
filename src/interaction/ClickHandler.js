@@ -89,8 +89,8 @@ export class ClickHandler {
     }
     this.behaviors.recordInteraction();
 
-    // 播放点击反应动画（500ms）
-    this.sm.transition('click_react', { force: true, duration: 500 });
+    // 播放点击反应动画（36帧@12fps = 3000ms）
+    this.sm.transition('click_react', { force: true, duration: 3000 });
 
     if (this.onSingleClick) {
       this.onSingleClick(e);
@@ -100,8 +100,8 @@ export class ClickHandler {
   _handleDoubleClick(e) {
     this.behaviors.recordInteraction();
 
-    // 播放开心动画
-    this.sm.transition('happy', { force: true, duration: 800 });
+    // 播放开心动画（36帧@12fps = 3000ms）
+    this.sm.transition('happy', { force: true, duration: 3000 });
 
     if (this.onDoubleClick) {
       this.onDoubleClick(e);

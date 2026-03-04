@@ -176,12 +176,12 @@ export class ChatPanel {
     this.abortBtn.style.display = 'none';
 
     if (sentiment === 'positive') {
-      this.sm.transition('happy', { force: true, duration: 1500 });
+      this.sm.transition('happy', { force: true, duration: 3000 });
     } else if (sentiment === 'negative') {
       this.sm.transition('sad', { force: true, duration: 1500 });
     } else if (text) {
       const s = this._detectSentiment(text);
-      if (s === 'positive') this.sm.transition('happy', { force: true, duration: 1500 });
+      if (s === 'positive') this.sm.transition('happy', { force: true, duration: 3000 });
       else if (s === 'negative') this.sm.transition('sad', { force: true, duration: 1500 });
       else this.sm.transition('idle', { force: true });
     } else {

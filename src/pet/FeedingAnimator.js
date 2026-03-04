@@ -199,7 +199,7 @@ export class FeedingAnimator {
       this._spawnHeartParticles(w, h);
       this._nextPhase();
       // 切换到 happy
-      this.stateMachine.transition('happy', { force: true, duration: 1200 });
+      this.stateMachine.transition('happy', { force: true, duration: 3000 });
     }
   }
 

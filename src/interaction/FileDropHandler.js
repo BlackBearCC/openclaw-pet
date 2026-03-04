@@ -141,7 +141,7 @@ export class FileDropHandler {
       this.intimacySystem?.gain(8);
       const dropCount = parseInt(localStorage.getItem('pet-file-drop-count') || '0') + 1;
       localStorage.setItem('pet-file-drop-count', String(dropCount));
-      this.sm.transition('happy', { force: true, duration: 1500 });
+      this.sm.transition('happy', { force: true, duration: 3000 });
 
     } catch (err) {
       console.error('[FileDropHandler] Error processing file:', err);

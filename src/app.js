@@ -40,6 +40,14 @@ class OpenClawPet {
 
     this.spriteSheet = new SpriteSheet();
     this.kittenSheet = new SpriteSheet();
+    // 额外动画 spritesheets
+    this.sleepEnterSheet = new SpriteSheet();
+    this.sleepLoopSheet = new SpriteSheet();
+    this.workEnterSheet = new SpriteSheet();
+    this.workLoopSheet = new SpriteSheet();
+    this.clickReactSheet = new SpriteSheet();
+    this.dragSheet = new SpriteSheet();
+    this.happySheet = new SpriteSheet();
     this.stateMachine = new StateMachine();
     this.moodSystem = new MoodSystem();
     this.renderer = null;
@@ -75,19 +83,27 @@ class OpenClawPet {
   async init() {
     console.log('🐱 OpenClaw Pet initializing...');
 
-    // 1. 并行加载 spritesheet（成年猫 + 幼猫）
+    // 1. 并行加载 spritesheet（成年猫 + 幼猫 + 姿势动画）
+    const spritePath = '../assets/sprites/placeholder/';
     try {
       await Promise.all([
-        this.spriteSheet.load(
-          '../assets/sprites/placeholder/spritesheet.png',
-          '../assets/sprites/placeholder/spritesheet.json'
-        ),
-        this.kittenSheet.load(
-          '../assets/sprites/placeholder/spritesheet-kitten.png',
-          '../assets/sprites/placeholder/spritesheet-kitten.json'
-        ).catch(() => {
-          console.warn('⚠️ Kitten spritesheet not found, using adult as fallback');
-        }),
+        this.spriteSheet.load(spritePath + 'spritesheet.png', spritePath + 'spritesheet.json'),
+        this.kittenSheet.load(spritePath + 'spritesheet-kitten.png', spritePath + 'spritesheet-kitten.json')
+          .catch(() => console.warn('⚠️ Kitten spritesheet not found, using adult as fallback')),
+        this.sleepEnterSheet.load(spritePath + 'sleep_enter.png', spritePath + 'sleep_enter.json')
+          .catch(() => console.warn('⚠️ sleep_enter spritesheet not found')),
+        this.sleepLoopSheet.load(spritePath + 'sleep_loop.png', spritePath + 'sleep_loop.json')
+          .catch(() => console.warn('⚠️ sleep_loop spritesheet not found')),
+        this.workEnterSheet.load(spritePath + 'work_enter.png', spritePath + 'work_enter.json')
+          .catch(() => console.warn('⚠️ work_enter spritesheet not found')),
+        this.workLoopSheet.load(spritePath + 'work_loop.png', spritePath + 'work_loop.json')
+          .catch(() => console.warn('⚠️ work_loop spritesheet not found')),
+        this.clickReactSheet.load(spritePath + 'click_react.png', spritePath + 'click_react.json')
+          .catch(() => console.warn('⚠️ click_react spritesheet not found')),
+        this.dragSheet.load(spritePath + 'drag.png', spritePath + 'drag.json')
+          .catch(() => console.warn('⚠️ drag spritesheet not found')),
+        this.happySheet.load(spritePath + 'happy.png', spritePath + 'happy.json')
+          .catch(() => console.warn('⚠️ happy spritesheet not found')),
       ]);
       console.log('✅ Spritesheets loaded');
     } catch (e) {
@@ -102,6 +118,17 @@ class OpenClawPet {
     // 3. 初始化渲染器（传入幼猫 sheet）
     this.renderer = new PetRenderer(this.canvas, this.spriteSheet, this.kittenSheet, 960);
     this.renderer.setGrowthStage(this.intimacySystem.stage);
+
+    // 3a. 注册额外 spritesheet 和复合动画
+    this.renderer.registerSheet('sleep_enter', this.sleepEnterSheet);
+    this.renderer.registerSheet('sleep_loop', this.sleepLoopSheet);
+    this.renderer.registerSheet('work_enter', this.workEnterSheet);
+    this.renderer.registerSheet('work_loop', this.workLoopSheet);
+    this.renderer.registerSheet('click_react', this.clickReactSheet);
+    this.renderer.registerSheet('drag', this.dragSheet);
+    this.renderer.registerSheet('happy', this.happySheet);
+    this.renderer.registerCompound('sleep', 'sleep_enter', 'sleep_loop');
+    this.renderer.registerCompound('work', 'work_enter', 'work_loop');
 
     // 3b. 喂食动画
     this.feedingAnimator = new FeedingAnimator(this.renderer, this.stateMachine);
@@ -176,7 +203,7 @@ class OpenClawPet {
         ? [`解锁了新技能：${toolName}！✨`, `喵！${toolName} 好厉害！`]
         : [`${toolName} 越用越熟练了！${'★'.repeat(stars)}`, `${toolName} 升星啦！喵～`];
       this.bubble.show(msgs[Math.floor(Math.random() * msgs.length)], 3000);
-      this.stateMachine.transition('happy', { force: true, duration: 1200 });
+      this.stateMachine.transition('happy', { force: true, duration: 3000 });
       this.achievementSystem?.check();
     });
 
@@ -187,7 +214,7 @@ class OpenClawPet {
     this.achievementSystem = new AchievementSystem(this.skillUnlockSystem, this.intimacySystem);
     this.achievementSystem.onUnlock((ach) => {
       this.bubble.show(`🏆 成就解锁：${ach.name}！${ach.icon}`, 4000);
-      this.stateMachine.transition('happy', { force: true, duration: 1500 });
+      this.stateMachine.transition('happy', { force: true, duration: 3000 });
       if (ach.intimacyBonus > 0) this.intimacySystem.gain(ach.intimacyBonus);
     });
     this.achievementSystem.setContext({
@@ -261,7 +288,7 @@ class OpenClawPet {
           this.behaviors.recordInteraction();
           const purrs = ['咕噜噜~ 😻', '好舒服喵~', '再摸摸！(=^ω^=)', '呼噜呼噜...', '主人真好~ ❤️', '喵呜~'];
           this.bubble.show(purrs[Math.floor(Math.random() * purrs.length)], 3000);
-          this.stateMachine.transition('happy', { force: true, duration: 2000 });
+          this.stateMachine.transition('happy', { force: true, duration: 3000 });
         }
       }
     );
@@ -282,7 +309,7 @@ class OpenClawPet {
         this.stateMachine.transition('sad', { force: true, duration: 2000 });
       } else if (level === 'joyful') {
         this.bubble.show('今天好开心！❤️', 2500);
-        this.stateMachine.transition('happy', { force: true, duration: 1500 });
+        this.stateMachine.transition('happy', { force: true, duration: 3000 });
       }
     });
 
@@ -306,7 +333,7 @@ class OpenClawPet {
     setTimeout(async () => {
       const greeting = this._buildGreeting();
       this.bubble.show(greeting, 4000);
-      this.stateMachine.transition('happy', { force: true, duration: 1200 });
+      this.stateMachine.transition('happy', { force: true, duration: 3000 });
     }, 800);
 
     console.log('✅ OpenClaw Pet ready!');
@@ -413,8 +440,10 @@ class OpenClawPet {
       // 2. 鼠标在 canvas 上 → 检查像素透明度
       if (e.target === this.canvas) {
         const rect = this.canvas.getBoundingClientRect();
-        const x = Math.floor(e.clientX - rect.left);
-        const y = Math.floor(e.clientY - rect.top);
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        const x = Math.floor((e.clientX - rect.left) * scaleX);
+        const y = Math.floor((e.clientY - rect.top) * scaleY);
         if (x >= 0 && y >= 0 && x < this.canvas.width && y < this.canvas.height) {
           const ctx = this.canvas.getContext('2d');
           const pixel = ctx.getImageData(x, y, 1, 1).data;
@@ -576,10 +605,10 @@ class OpenClawPet {
         if (event.data?.phase === 'thinking' || event.data?.phase === 'running') {
           const interruptible = ['idle', 'idle2', 'idle3', 'walk', 'sit', 'sleep'];
           if (interruptible.includes(this.stateMachine.currentState)) {
-            this.stateMachine.transition('talk', { force: true });
+            this.stateMachine.transition('work', { force: true });
           }
         } else if (event.data?.phase === 'complete') {
-          this.stateMachine.transition('happy', { force: true, duration: 1500 });
+          this.stateMachine.transition('happy', { force: true, duration: 3000 });
           this.bubble.show('任务完成了喵！✨', 2000);
 
           const isSubSession = event.sessionKey && !event.sessionKey.endsWith(':main');

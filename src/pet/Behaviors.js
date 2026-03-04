@@ -112,7 +112,7 @@ export class Behaviors {
         this.x = Math.max(this.config.bounds.left, Math.min(this.config.bounds.right - 128, this.x));
         this.walkTarget = null;
         this._emitEdgeReaction(edge);
-        this.sm.transition('click_react', { force: true, duration: 800 });
+        this.sm.transition('click_react', { force: true, duration: 3000 });
         this.renderer.setFlipX(edge === 'right');
         return;
       }
