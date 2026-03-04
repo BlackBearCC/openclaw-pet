@@ -2,7 +2,7 @@
  * StreamingBubble.js
  * 流式多段气泡 — AI 回复按标点分段，逐段浮现，旧段缩小淡出上移
  *
- * 位于宠物头顶，段从下往上堆叠
+ * 位于宠物头顶，段从下往上堆叠，不规则倾斜漫画感
  */
 
 import { splitAtPunctuation } from '../utils/textSplitter.js';
@@ -16,11 +16,16 @@ export class StreamingBubble {
     this.petArea = petArea;
     this.simpleBubble = simpleBubble;
 
-    this.segments = [];        // { el, text }
+    this.segments = [];        // { el, text, timer }
     this.pendingText = '';     // 未到标点的缓冲
     this.lastFullText = '';    // 上次 appendText 收到的全文（用于 diff）
     this.isActive = false;
     this.hideTimer = null;
+
+    // 最少 1 秒间隔
+    this._lastPromoteTime = 0;
+    this._pendingPromote = [];  // 排队等待显示的段
+    this._promoteTimer = null;
 
     // 容器 DOM — 直接挂在 pet-area 上
     this.wrapEl = document.createElement('div');
@@ -32,7 +37,7 @@ export class StreamingBubble {
     this.currentEl = null;
   }
 
-  /** 兼容调用（位置现在固定在头顶） */
+  /** 兼容调用 */
   updateSide() {}
 
   /** 开始新一轮流式输出 */
@@ -41,7 +46,6 @@ export class StreamingBubble {
     this.clear();
     this.isActive = true;
     this.wrapEl.style.display = '';
-    // 隐藏普通气泡
     if (this.simpleBubble) this.simpleBubble.hide();
   }
 
@@ -63,11 +67,11 @@ export class StreamingBubble {
   finalize() {
     if (!this.isActive) return;
 
-    // 把残余文本变成最后一段
     const rest = this.pendingText.trim();
     if (rest) {
-      this._promoteCurrentSegment(rest);
+      this._enqueueSegment(rest);
     }
+    this.pendingText = '';
     this._removeCurrentEl();
   }
 
@@ -77,12 +81,18 @@ export class StreamingBubble {
   /** 清除所有段 */
   clear() {
     this._clearHideTimer();
+    if (this._promoteTimer) {
+      clearTimeout(this._promoteTimer);
+      this._promoteTimer = null;
+    }
+    this._pendingPromote = [];
     for (const seg of this.segments) {
       if (seg.timer) clearTimeout(seg.timer);
     }
     this.segments = [];
     this.pendingText = '';
     this.lastFullText = '';
+    this._lastPromoteTime = 0;
     this.currentEl = null;
     this.isActive = false;
     this.wrapEl.innerHTML = '';
@@ -100,11 +110,10 @@ export class StreamingBubble {
     const { segments, remainder } = splitAtPunctuation(this.pendingText);
 
     for (const text of segments) {
-      this._promoteCurrentSegment(text);
+      this._enqueueSegment(text);
     }
 
     this.pendingText = remainder;
-    // 更新"当前打字段"
     if (remainder) {
       this._updateCurrentEl(remainder);
     } else {
@@ -112,13 +121,49 @@ export class StreamingBubble {
     }
   }
 
-  /** 将文本固化为一个正式段 */
-  _promoteCurrentSegment(text) {
+  /** 入队 — 确保至少 1 秒间隔 */
+  _enqueueSegment(text) {
+    this._pendingPromote.push(text);
+    this._flushQueue();
+  }
+
+  _flushQueue() {
+    if (this._promoteTimer || this._pendingPromote.length === 0) return;
+
+    const now = Date.now();
+    const elapsed = now - this._lastPromoteTime;
+    const MIN_INTERVAL = 1000;
+
+    if (elapsed >= MIN_INTERVAL) {
+      this._showSegment(this._pendingPromote.shift());
+      this._lastPromoteTime = Date.now();
+      // 继续排空队列
+      if (this._pendingPromote.length > 0) {
+        this._promoteTimer = setTimeout(() => {
+          this._promoteTimer = null;
+          this._flushQueue();
+        }, MIN_INTERVAL);
+      }
+    } else {
+      this._promoteTimer = setTimeout(() => {
+        this._promoteTimer = null;
+        this._flushQueue();
+      }, MIN_INTERVAL - elapsed);
+    }
+  }
+
+  /** 实际显示一个段 */
+  _showSegment(text) {
     this._removeCurrentEl();
 
     const el = document.createElement('div');
     el.className = 'stream-segment';
     el.textContent = text;
+
+    // 随机倾斜 — 漫画感
+    const tilt = (Math.random() - 0.5) * 5; // -2.5° ~ +2.5°
+    el.style.setProperty('--tilt', `rotate(${tilt.toFixed(1)}deg)`);
+
     this.wrapEl.appendChild(el);
     const seg = { el, text, timer: null };
     this.segments.push(seg);
@@ -155,8 +200,8 @@ export class StreamingBubble {
     seg.el.classList.add('retiring');
     setTimeout(() => { if (seg.el.parentNode) seg.el.remove(); }, 600);
 
-    // 所有段都退完且流已结束 → 隐藏容器
-    if (this.segments.length === 0 && !this.currentEl) {
+    // 所有段都退完且队列空且流已结束 → 隐藏容器
+    if (this.segments.length === 0 && this._pendingPromote.length === 0 && !this.currentEl) {
       setTimeout(() => {
         if (this.segments.length === 0) this.clear();
       }, 700);

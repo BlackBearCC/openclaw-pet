@@ -68,8 +68,8 @@ html, body {
 /* ===== 宠物区域（右下角） ===== */
 #pet-area {
   position: relative;
-  width: 256px;
-  height: 256px;
+  width: 280px;
+  height: 400px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -80,6 +80,7 @@ html, body {
 #pet-canvas {
   width: 256px;
   height: 256px;
+  flex-shrink: 0;
   cursor: grab;
   animation: petAppear 0.5s ease-out;
 }
@@ -1225,38 +1226,40 @@ html, body {
 
 .stream-segments-container {
   position: absolute;
-  bottom: 190px;
-  left: 5px;
-  right: 5px;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 260px;  /* 在 canvas 上方 */
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  gap: 4px;
+  gap: 5px;
   pointer-events: none;
   z-index: 25;
 }
 
 .stream-segment {
-  background: var(--paper);
+  /* 与 Bubble.js 一致的手绘风格 */
+  background: #FFF9F2;
   border: 2.5px solid var(--ink);
   border-radius: 16px 4px 14px 6px / 6px 14px 4px 16px;
-  padding: 5px 8px;
-  font-size: 11px;
-  line-height: 1.4;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.5;
   font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
   font-weight: 600;
   color: var(--ink);
-  max-width: 230px;
+  max-width: 220px;
   word-wrap: break-word;
-  box-shadow: 2px 2px 0 var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
   white-space: pre-wrap;
   opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 0.3s ease, transform 0.3s ease, font-size 0.5s ease-out;
+  transform: translateY(10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 .stream-segment.visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) var(--tilt, rotate(0deg));
 }
 .stream-segment.current {
   border-style: dashed;
@@ -1264,8 +1267,7 @@ html, body {
 }
 .stream-segment.retiring {
   opacity: 0 !important;
-  font-size: 10px;
-  transform: translateY(-15px) scale(0.85) !important;
+  transform: translateY(-20px) scale(0.85) !important;
   transition: all 0.5s ease-out !important;
   pointer-events: none;
 }
