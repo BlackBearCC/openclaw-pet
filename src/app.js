@@ -34,6 +34,8 @@ import { AchievementSystem } from './pet/AchievementSystem.js';
 import { StreamingBubble } from './ui/StreamingBubble.js';
 import { BottomChatInput } from './ui/BottomChatInput.js';
 import { MarkdownPanel } from './ui/MarkdownPanel.js';
+import { HungerSystem } from './pet/HungerSystem.js';
+import { HealthSystem } from './pet/HealthSystem.js';
 
 class OpenClawPet {
   constructor() {
@@ -60,6 +62,8 @@ class OpenClawPet {
     this.idleYawnSheet = new SpriteSheet();
     this.stateMachine = new StateMachine();
     this.moodSystem = new MoodSystem();
+    this.hungerSystem = new HungerSystem();
+    this.healthSystem = new HealthSystem();
     this.renderer = null;
     this.behaviors = null;
     this.bubble = null;
@@ -228,6 +232,30 @@ class OpenClawPet {
       }
     });
 
+    // 6e2. 养成系统行为联动（状态显示在右键菜单中）
+    // 饱腹变化
+    this.hungerSystem.onChange((level, _hunger) => {
+      if (level === 'starving') {
+        this.bubble.show('呜...好饿喵 🥺', 4000);
+        this.stateMachine.transition('sad', { force: true, duration: 2000 });
+      } else if (level === 'hungry') {
+        this.bubble.show('主人，我有点饿了...', 3000);
+      } else if (level === 'full') {
+        this.bubble.show('吃饱了！好满足～ 😋', 2500);
+      }
+    });
+
+    // 健康变化
+    this.healthSystem.onChange((level, _health) => {
+      if (level === 'sick') {
+        this.bubble.show('感觉有点不舒服... 🤒', 4000);
+        this.stateMachine.transition('sad', { force: true, duration: 3000 });
+      } else if (level === 'healthy') {
+        this.bubble.show('感觉好多了喵！', 2500);
+        this.stateMachine.transition('happy', { force: true, duration: 2000 });
+      }
+    });
+
     // 6f. 头顶状态条
     this.toolStatusBar = new ToolStatusBar(document.getElementById('pet-area'));
 
@@ -346,7 +374,7 @@ class OpenClawPet {
         { icon: '⚙️', label: '设置',       action: () => { this.chatPanel.isOpen && this.chatPanel.closeQuiet(); this.skillPanel.isOpen && this.skillPanel.closeQuiet(); this.settingsPanel.open(); } },
         { icon: '📖', label: '图鉴',       action: () => { this.chatPanel.isOpen && this.chatPanel.closeQuiet(); this.settingsPanel.isOpen && this.settingsPanel.closeQuiet(); this.skillPanel.toggle(); } },
         { type: 'separator' },
-        { icon: '🍤', label: '喂零食',     action: () => { if (!this.feedingAnimator.isPlaying) { this.behaviors.recordInteraction(); this.feedingAnimator.play(() => { this.moodSystem.gain(20); this.intimacySystem.gain(10); this.bubble.show(['好吃！~ 😋','喵呜~ 谢谢主人！','啊好香！还有吗！'][Math.floor(Math.random()*3)], 3000); }); } } },
+        { icon: '🍤', label: '喂零食',     action: () => { if (!this.feedingAnimator.isPlaying) { this.behaviors.recordInteraction(); this.feedingAnimator.play(() => { this.moodSystem.gain(20); this.hungerSystem.feedSnack(); this.intimacySystem.gain(10); this.bubble.show(['好吃！~ 😋','喵呜~ 谢谢主人！','啊好香！还有吗！'][Math.floor(Math.random()*3)], 3000); }); } } },
         { type: 'separator' },
         { icon: '📌', label: '置顶',       action: () => api.toggleAlwaysOnTop?.() },
         { type: 'separator' },
@@ -354,14 +382,21 @@ class OpenClawPet {
         { icon: '🔧', label: '开发者工具', action: () => api.openDevTools?.() },
         { type: 'separator' },
         { icon: '❌', label: '退出',       action: () => api.appQuit?.() },
-      ]);
+      ], () => ({
+        hunger: this.hungerSystem.getHunger(),
+        mood:   this.moodSystem.getMood(),
+        health: this.healthSystem.getHealth(),
+      }), {
+        onOpen:  () => this.electronAPI?.setIgnoreMouse(false),
+        onClose: () => this._updateMousePassthrough(),
+      });
     }
 
     // 7. 鼠标穿透
     this._setupMousePassthrough();
 
     // 8. 心情值变化响应
-    this.moodSystem.onChange((level, mood) => {
+    this.moodSystem.onChange((level, _mood) => {
       if (level === 'sad') {
         this.bubble.show('主人...你不陪我吗 🥺', 4000);
         this.stateMachine.transition('sad', { force: true, duration: 2000 });
@@ -370,6 +405,7 @@ class OpenClawPet {
         this.stateMachine.transition('happy', { force: true, duration: 3000 });
       }
     });
+
 
     // 9. 亲密度里程碑
     this.intimacySystem.onMilestone((stage, info) => {
@@ -474,6 +510,11 @@ class OpenClawPet {
     }, 5 * 60 * 1000);
   }
 
+  /** 菜单关闭后恢复穿透状态（交给下一次 mousemove 精确判断） */
+  _updateMousePassthrough() {
+    this.electronAPI?.setIgnoreMouse(true);
+  }
+
   _setupMousePassthrough() {
     if (!this.electronAPI) return;
 
@@ -559,10 +600,12 @@ class OpenClawPet {
       this.bubble.show('对话已清空~ 重新开始吧！', 2000);
     });
 
-    // AI 聊天回复完成 → 亲密度 +3 + 成就检查
+    // AI 聊天回复完成 → 亲密度 +3 + 饱腹（按回复长度）+ 成就检查
     this.electronAPI.onChatStream?.((payload) => {
       if (payload?.state === 'final') {
         this.intimacySystem.gain(3);
+        const msgLen = (payload.message || '').length;
+        this.hungerSystem.onChatFinal(msgLen);
         this._chatCompletionCount++;
         localStorage.setItem('pet-chat-count', String(this._chatCompletionCount));
         this.achievementSystem?.check();
@@ -574,8 +617,9 @@ class OpenClawPet {
       if (this.feedingAnimator.isPlaying) return; // 防止动画叠加
       this.behaviors.recordInteraction();
       this.feedingAnimator.play(() => {
-        // 动画结束后：加心情 + 加亲密度 + 显示气泡
+        // 动画结束后：加心情 + 加饱腹 + 加亲密度 + 显示气泡
         this.moodSystem.gain(20);
+        this.hungerSystem.feedSnack();
         this.intimacySystem.gain(10);
         const foods = ['好吃！~ 😋', '喵呜~ 谢谢主人！', '啊好香！还有吗！', '(=^・ω・^=) 满足了~', '最喜欢主人了！❤️'];
         this.bubble.show(foods[Math.floor(Math.random() * foods.length)], 3000);
@@ -727,6 +771,8 @@ class OpenClawPet {
       this.stateMachine.update(deltaMs);
       this.behaviors.update(deltaMs);
       this.moodSystem.update(deltaMs);
+      this.hungerSystem.update(deltaMs);
+      this.healthSystem.update(deltaMs, this.hungerSystem.getLevel(), this.moodSystem.getLevel());
 
       // 每 ~30 帧更新一次图标/朝向（避免每帧查询）
       if (++iconUpdateCounter >= 30) {

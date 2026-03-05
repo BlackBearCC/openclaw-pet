@@ -89,6 +89,46 @@ html, body {
   cursor: grabbing;
 }
 
+/* ===== 右键菜单养成状态块 ===== */
+.ctx-stats {
+  padding: 8px 10px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ctx-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ctx-stat-icon {
+  font-size: 12px;
+  line-height: 1;
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+}
+
+.ctx-stat-track {
+  flex: 1;
+  height: 6px;
+  background: var(--ink-faint);
+  border: 1.5px solid var(--ink);
+  border-radius: 3px 1px 3px 1px / 1px 3px 1px 3px;
+  overflow: hidden;
+}
+
+.ctx-stat-fill {
+  height: 100%;
+  border-radius: 2px;
+}
+
+.ctx-stat--hunger { background: var(--clr-primary); }
+.ctx-stat--mood   { background: var(--clr-purple); }
+.ctx-stat--health { background: var(--clr-green); }
+
 /* ===== 气泡 ===== */
 #bubble-container {
   position: absolute;

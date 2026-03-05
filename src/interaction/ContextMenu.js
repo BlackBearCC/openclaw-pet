@@ -12,10 +12,14 @@ export class ContextMenu {
   /**
    * @param {HTMLElement} trigger - 触发右键的元素
    * @param {Array} items - 菜单项列表
+   * @param {() => {hunger:number, mood:number, health:number}} [getStats] - 可选，返回当前养成数值
    */
-  constructor(trigger, items) {
+  constructor(trigger, items, getStats, { onOpen, onClose } = {}) {
     this.trigger = trigger;
     this.items = items;
+    this.getStats = getStats || null;
+    this._onOpen = onOpen || null;
+    this._onClose = onClose || null;
     this._menu = null;
 
     this._onContextMenu = this._onContextMenu.bind(this);
@@ -33,6 +37,31 @@ export class ContextMenu {
 
     const menu = document.createElement('div');
     menu.className = 'custom-context-menu';
+
+    // 养成状态块（顶部）
+    if (this.getStats) {
+      const s = this.getStats();
+      const block = document.createElement('div');
+      block.className = 'ctx-stats';
+      block.innerHTML = `
+        <div class="ctx-stat-row">
+          <span class="ctx-stat-icon">🍖</span>
+          <div class="ctx-stat-track"><div class="ctx-stat-fill ctx-stat--hunger" style="width:${s.hunger}%"></div></div>
+        </div>
+        <div class="ctx-stat-row">
+          <span class="ctx-stat-icon">😊</span>
+          <div class="ctx-stat-track"><div class="ctx-stat-fill ctx-stat--mood" style="width:${s.mood}%"></div></div>
+        </div>
+        <div class="ctx-stat-row">
+          <span class="ctx-stat-icon">💚</span>
+          <div class="ctx-stat-track"><div class="ctx-stat-fill ctx-stat--health" style="width:${s.health}%"></div></div>
+        </div>
+      `;
+      menu.appendChild(block);
+      const sep = document.createElement('div');
+      sep.className = 'ctx-separator';
+      menu.appendChild(sep);
+    }
 
     for (const item of this.items) {
       if (item.type === 'separator') {
@@ -75,9 +104,13 @@ export class ContextMenu {
     // 入场动画
     requestAnimationFrame(() => menu.classList.add('visible'));
 
-    // 点击外部或按 Esc 关闭（用 click 而非 mousedown，避免 mousedown 时移除 DOM 导致按钮 click 不触发）
+    // 菜单展开：禁用鼠标穿透，确保点击任何位置都能被捕获
+    this._onOpen?.();
+
+    // 点击外部、右键别处或按 Esc 关闭
     setTimeout(() => {
       document.addEventListener('click', this._dismiss, { once: true });
+      document.addEventListener('contextmenu', this._dismiss, { once: true });
     }, 0);
     document.addEventListener('keydown', this._onKeyDown = (e) => {
       if (e.key === 'Escape') this._dismiss();
@@ -89,6 +122,9 @@ export class ContextMenu {
     this._menu.remove();
     this._menu = null;
     document.removeEventListener('click', this._dismiss);
+    document.removeEventListener('contextmenu', this._dismiss);
+    // 菜单关闭：恢复正常鼠标穿透逻辑
+    this._onClose?.();
   }
 
   destroy() {
