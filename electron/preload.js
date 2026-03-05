@@ -73,9 +73,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onChatStream: (callback) => ipcRenderer.on('chat-stream', (e, payload) => callback(payload)),
   onAgentEvent: (callback) => ipcRenderer.on('agent-event', (e, payload) => callback(payload)),
 
-  // === 技能图鉴 ===
-  onOpenSkills: (callback) => ipcRenderer.on('open-skills', () => callback()),
-
   // === 情感互动事件 ===
   onFeedPet: (callback) => ipcRenderer.on('feed-pet', () => callback()),
   onClipboardChange: (callback) => ipcRenderer.on('clipboard-changed', (e, data) => callback(data)),

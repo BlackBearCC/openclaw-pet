@@ -28,7 +28,6 @@ export class ChatPanel {
 
     // 消息 raw text 映射（供复制用）
     this._rawTextMap = {};
-    this._onSendCallbacks = [];
 
     this._createDOM();
     this._setupStreamListener();
@@ -127,18 +126,12 @@ export class ChatPanel {
     });
   }
 
-  /** 注册用户发送消息回调（每次用户发送时触发，传入消息文本） */
-  onSend(callback) {
-    this._onSendCallbacks.push(callback);
-  }
-
   async _send() {
     const text = this.inputEl.value.trim();
     if (!text || this.isSending) return;
 
     this.inputEl.value = '';
     this._addMessage('user', text);
-    this._onSendCallbacks.forEach(cb => cb(text));
 
     this.isSending = true;
     this.sendBtn.style.display = 'none';
