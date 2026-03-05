@@ -41,7 +41,6 @@ class OpenClawPet {
     this.bubbleContainer = document.getElementById('bubble-container');
     this.electronAPI = window.electronAPI || null;
 
-    this.spriteSheet = new SpriteSheet();
     this.kittenSheet = new SpriteSheet();
     this.idleSheet = new SpriteSheet();
     // 额外动画 spritesheets
@@ -101,8 +100,6 @@ class OpenClawPet {
     const spritePath = '../assets/sprites/placeholder/';
     try {
       await Promise.all([
-        this.spriteSheet.load(spritePath + 'spritesheet.png', spritePath + 'spritesheet.json')
-          .catch(() => console.warn('⚠️ spritesheet not found')),
         this.kittenSheet.load(spritePath + 'spritesheet-kitten.png', spritePath + 'spritesheet-kitten.json')
           .catch(() => console.warn('⚠️ Kitten spritesheet not found, using adult as fallback')),
         this.sleepEnterSheet.load(spritePath + 'sleep_enter.png', spritePath + 'sleep_enter.json')
@@ -147,7 +144,7 @@ class OpenClawPet {
     this.intimacySystem = new IntimacySystem();
 
     // 3. 初始化渲染器（传入幼猫 sheet）
-    this.renderer = new PetRenderer(this.canvas, this.spriteSheet, this.kittenSheet, 960);
+    this.renderer = new PetRenderer(this.canvas, this.kittenSheet, 960);
     this.renderer.setGrowthStage(this.intimacySystem.stage);
 
     // 3a. 注册额外 spritesheet 和复合动画

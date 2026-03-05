@@ -79,11 +79,14 @@ export class SpriteSheet {
    * @returns {{ frames: Array, fps: number, loop: boolean }}
    */
   getAnimation(animationName) {
-    if (!this.meta || !this.meta.animations[animationName]) {
-      console.warn(`Animation "${animationName}" not found in spritesheet`);
-      return null;
+    if (!this.meta) return null;
+    if (this.meta.animations[animationName]) return this.meta.animations[animationName];
+    // Fallback to 'idle' frames when this sheet doesn't have the requested animation
+    if (animationName !== 'idle' && this.meta.animations['idle']) {
+      return this.meta.animations['idle'];
     }
-    return this.meta.animations[animationName];
+    console.warn(`Animation "${animationName}" not found in spritesheet`);
+    return null;
   }
 
   /**

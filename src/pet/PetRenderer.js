@@ -12,14 +12,12 @@
 export class PetRenderer {
   /**
    * @param {HTMLCanvasElement} canvas
-   * @param {import('./SpriteSheet').SpriteSheet} spriteSheet
    * @param {import('./SpriteSheet').SpriteSheet} spriteSheetKitten - 幼猫 spritesheet（stage 0 使用）
    * @param {number} renderSize - 渲染尺寸（正方形）
    */
-  constructor(canvas, spriteSheet, spriteSheetKitten, renderSize = 128) {
+  constructor(canvas, spriteSheetKitten, renderSize = 128) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
-    this.spriteSheet = spriteSheet;
     this.spriteSheetKitten = spriteSheetKitten;
     this.renderSize = renderSize;
     this._growthStage = 0;
@@ -231,7 +229,7 @@ export class PetRenderer {
     if (this._growthStage === 0 && this.spriteSheetKitten?.loaded) {
       return this.spriteSheetKitten;
     }
-    return this.spriteSheet;
+    return this._extraSheets.get('idle') || null;
   }
 
   /** 获取当前动画使用的 spritesheet */
