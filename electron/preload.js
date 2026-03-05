@@ -84,4 +84,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onForegroundAppChanged: (callback) => ipcRenderer.on('foreground-app-changed', (e, data) => callback(data)),
   onDockTargetUpdate: (callback) => ipcRenderer.on('dock-target-update', (e, data) => callback(data)),
   onToggleDocking: (callback) => ipcRenderer.on('toggle-docking', (e, enabled) => callback(enabled)),
+
+  // === PetAI — 宠物内心活动，直接调 LLM，不过 gateway ===
+  petAIComplete: (prompt) => ipcRenderer.invoke('pet-ai-complete', prompt),
+
+  // === Agent 记忆写入 ===
+  writeSkillFile: (skillName, content) => ipcRenderer.invoke('write-skill-file', skillName, content),
+  appendAgentSession: (text) => ipcRenderer.invoke('append-agent-session', text),
+  appendAgentMemory: (text) => ipcRenderer.invoke('append-agent-memory', text),
 });

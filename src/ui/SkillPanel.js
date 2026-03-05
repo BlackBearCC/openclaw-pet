@@ -171,9 +171,28 @@ export class SkillPanel {
       cat.keys.some(k => allUsedKeys.some(u => u.includes(k)))
     ).length;
 
+    // 领悟技能（来自 KnowledgeSystem）
+    const realizedSkills = JSON.parse(localStorage.getItem('pet-realized-skills') || '[]');
+    const realizedHtml = realizedSkills.length === 0
+      ? '<div class="skill-realized-empty">还没有领悟任何技能，多和我聊聊吧~ 🐾</div>'
+      : realizedSkills.map(s => {
+          const date = new Date(s.realizedAt).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
+          return `
+            <div class="skill-realized-card">
+              <div class="skill-realized-title">✨ ${s.skillTitle}</div>
+              <div class="skill-realized-domain">${s.domainName} · ${date}</div>
+              <div class="skill-realized-summary">${s.summary}</div>
+            </div>
+          `;
+        }).join('');
+
     body.innerHTML = `
       <div class="skill-count">共 ${SKILL_CATEGORIES.length} 项技能（已解锁 ${unlockedCount}）</div>
       <div class="skill-grid">${cards}</div>
+      <div class="skill-realized-section">
+        <div class="skill-realized-header">💡 领悟技能（${realizedSkills.length}）</div>
+        ${realizedHtml}
+      </div>
     `;
   }
 

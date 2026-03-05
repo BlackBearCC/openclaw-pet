@@ -36,6 +36,8 @@ import { BottomChatInput } from './ui/BottomChatInput.js';
 import { MarkdownPanel } from './ui/MarkdownPanel.js';
 import { HungerSystem } from './pet/HungerSystem.js';
 import { HealthSystem } from './pet/HealthSystem.js';
+import { KnowledgeSystem } from './pet/KnowledgeSystem.js';
+import { PetAI } from './pet/PetAI.js';
 
 class OpenClawPet {
   constructor() {
@@ -67,6 +69,8 @@ class OpenClawPet {
     this.moodSystem = new MoodSystem();
     this.hungerSystem = new HungerSystem();
     this.healthSystem = new HealthSystem();
+    this.knowledgeSystem = new KnowledgeSystem();
+    this.petAI = null; // 初始化在 init() 后（需要 electronAPI）
     this.renderer = null;
     this.behaviors = null;
     this.bubble = null;
@@ -323,6 +327,14 @@ class OpenClawPet {
 
     // 恢复 chat 计数
     this._chatCompletionCount = parseInt(localStorage.getItem('pet-chat-count') || '0');
+
+    // 6k. PetAI + 领悟系统
+    if (this.electronAPI) {
+      this.petAI = new PetAI(this.electronAPI);
+      this.knowledgeSystem.onEpiphany(({ domainName, recentTopics }) => {
+        this._handleEpiphany(domainName, recentTopics);
+      });
+    }
 
     // 6j. 工作区感知
     this.workspaceWatcher = new WorkspaceWatcher();
@@ -618,12 +630,13 @@ class OpenClawPet {
       this.bubble.show('对话已清空~ 重新开始吧！', 2000);
     });
 
-    // AI 聊天回复完成 → 亲密度 +3 + 饱腹（按回复长度）+ 成就检查
+    // AI 聊天回复完成 → 亲密度 +3 + 饱腹（按回复长度）+ 知识积累 + 成就检查
     this.electronAPI.onChatStream?.((payload) => {
       if (payload?.state === 'final') {
         this.intimacySystem.gain(3);
-        const msgLen = (payload.message || '').length;
-        this.hungerSystem.onChatFinal(msgLen);
+        const msg = payload.message || '';
+        this.hungerSystem.onChatFinal(msg.length);
+        this.knowledgeSystem.addFragment(msg);
         this._chatCompletionCount++;
         localStorage.setItem('pet-chat-count', String(this._chatCompletionCount));
         this.achievementSystem?.check();
@@ -766,6 +779,48 @@ class OpenClawPet {
       this.bubble.show(hint, 6000);
       this.stateMachine.transition('idle_ear_twitch', { force: true, duration: 2000 }); // 侧耳倾听
     });
+  }
+
+  /**
+   * 领悟事件处理：发呆 → PetAI 生成 → 写入 Agent 记录 → 冒泡 → 技能图鉴
+   */
+  async _handleEpiphany(domainName, recentTopics) {
+    if (!this.petAI || this.petAI.isBusy) return;
+
+    // 进入发呆动画
+    this.stateMachine.transition('idle', { force: true });
+
+    // 调用 PetAI 生成领悟内容
+    const result = await this.petAI.generateEpiphany(domainName, recentTopics);
+    if (!result) return;
+
+    const { bubble, skillName, skillTitle, skillDesc, skillContent, summary } = result;
+
+    // 构建 SKILL.md 内容
+    const skillMd = `---\nname: ${skillName}\ndescription: "${skillDesc}"\n---\n\n# ${skillTitle}\n\n${skillContent}\n`;
+
+    // 并行写入：技能文件 + agent session + agent memory
+    const eventText = `[event:skill-realized] 宠物领悟了「${skillTitle}」：${summary}`;
+    await Promise.all([
+      this.electronAPI.writeSkillFile(skillName, skillMd),
+      this.electronAPI.appendAgentSession(eventText),
+      this.electronAPI.appendAgentMemory(eventText),
+    ]);
+
+    // 存入 localStorage 技能图鉴
+    const skills = JSON.parse(localStorage.getItem('pet-realized-skills') || '[]');
+    skills.push({
+      skillName, skillTitle, skillDesc, summary, domainName,
+      realizedAt: Date.now(),
+    });
+    localStorage.setItem('pet-realized-skills', JSON.stringify(skills));
+
+    // 渲染冒泡（使用模板）
+    const bubbleText = KnowledgeSystem.renderBubble(bubble);
+    this.stateMachine.transition('happy', { force: true, duration: 2000 });
+    setTimeout(() => this.bubble.show(bubbleText, 5000), 800);
+
+    console.log(`[epiphany] 领悟了「${skillTitle}」(${skillName})`);
   }
 
   _disableDocking() {

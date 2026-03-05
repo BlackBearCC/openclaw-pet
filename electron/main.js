@@ -10,6 +10,8 @@
 
 const { app, BrowserWindow, ipcMain, Menu, screen, clipboard } = require('electron');
 const path = require('path');
+const fs = require('fs');
+const os = require('os');
 const { LLMService, AI_PROVIDERS } = require('./llm-service');
 const { Win32Monitor } = require('./win32-monitor');
 
@@ -200,6 +202,107 @@ function createWindow() {
   ipcMain.handle('clear-chat-history', () => {
     llmService.clearHistory();
     return true;
+  });
+
+  // ===== IPC: PetAI — 宠物内心 LLM 直接调用（不过 gateway）=====
+  ipcMain.handle('pet-ai-complete', async (event, prompt) => {
+    const cfg = llmService.config;
+    if (!cfg.aiBaseUrl || !cfg.aiApiKey || !cfg.aiModel) {
+      console.warn('[pet-ai] No LLM config available');
+      return null;
+    }
+    try {
+      const res = await fetch(`${cfg.aiBaseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${cfg.aiApiKey}`,
+        },
+        body: JSON.stringify({
+          model: cfg.aiModel,
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 512,
+          temperature: 0.85,
+        }),
+      });
+      if (!res.ok) { console.warn('[pet-ai] LLM error:', res.status); return null; }
+      const data = await res.json();
+      return data.choices?.[0]?.message?.content?.trim() || null;
+    } catch (e) {
+      console.warn('[pet-ai] fetch failed:', e.message);
+      return null;
+    }
+  });
+
+  // ===== IPC: 写入技能文件到 OpenClaw workspace =====
+  ipcMain.handle('write-skill-file', (event, skillName, content) => {
+    try {
+      const skillDir = path.join(os.homedir(), '.openclaw', 'workspace', 'skills', skillName);
+      fs.mkdirSync(skillDir, { recursive: true });
+      fs.writeFileSync(path.join(skillDir, 'SKILL.md'), content, 'utf-8');
+      console.log(`[pet-ai] Skill written: ${skillName}`);
+      return true;
+    } catch (e) {
+      console.warn('[pet-ai] write-skill-file failed:', e.message);
+      return false;
+    }
+  });
+
+  // ===== IPC: 追加事件到当前 Agent session =====
+  ipcMain.handle('append-agent-session', (event, text) => {
+    try {
+      const sessionsJson = path.join(os.homedir(), '.openclaw', 'agents', 'main', 'sessions', 'sessions.json');
+      if (!fs.existsSync(sessionsJson)) return false;
+      const sessions = JSON.parse(fs.readFileSync(sessionsJson, 'utf-8'));
+      const current = sessions['agent:main:main'];
+      if (!current?.sessionFile) return false;
+
+      const sessionFile = current.sessionFile;
+      if (!fs.existsSync(sessionFile)) return false;
+
+      // 读取最后一行获取 parentId
+      const content = fs.readFileSync(sessionFile, 'utf-8').trimEnd();
+      const lines = content.split('\n');
+      let parentId = null;
+      for (let i = lines.length - 1; i >= 0; i--) {
+        try { parentId = JSON.parse(lines[i]).id; break; } catch {}
+      }
+
+      const entry = JSON.stringify({
+        type: 'message',
+        id: `pet-${Date.now().toString(36)}`,
+        parentId,
+        timestamp: new Date().toISOString(),
+        message: {
+          role: 'user',
+          content: [{ type: 'text', text }],
+          timestamp: Date.now(),
+        },
+      });
+      fs.appendFileSync(sessionFile, '\n' + entry, 'utf-8');
+      console.log('[pet-ai] Session event appended');
+      return true;
+    } catch (e) {
+      console.warn('[pet-ai] append-agent-session failed:', e.message);
+      return false;
+    }
+  });
+
+  // ===== IPC: 追加事件到当日 Agent 记忆 =====
+  ipcMain.handle('append-agent-memory', (event, text) => {
+    try {
+      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      const memoryDir = path.join(os.homedir(), '.openclaw', 'workspace', 'memory');
+      fs.mkdirSync(memoryDir, { recursive: true });
+      const memoryFile = path.join(memoryDir, `${today}.md`);
+      const line = `\n- [pet-event] ${text}`;
+      fs.appendFileSync(memoryFile, line, 'utf-8');
+      console.log('[pet-ai] Memory appended');
+      return true;
+    } catch (e) {
+      console.warn('[pet-ai] append-agent-memory failed:', e.message);
+      return false;
+    }
   });
 
   // ===== IPC: 应用控制（自定义右键菜单调用） =====
