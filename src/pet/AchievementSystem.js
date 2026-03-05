@@ -30,8 +30,8 @@ const ACHIEVEMENTS = [
 export { ACHIEVEMENTS };
 
 export class AchievementSystem {
-  constructor(skillUnlockSystem, intimacySystem) {
-    this.skillUnlockSystem = skillUnlockSystem;
+  constructor(skillSystem, intimacySystem) {
+    this.skillSystem = skillSystem;
     this.intimacySystem = intimacySystem;
     this._miniCatSystem = null;
     this._agentStatsTracker = null;
@@ -83,7 +83,7 @@ export class AchievementSystem {
   onUnlock(cb) { this._callbacks.push(cb); }
 
   _buildContext() {
-    const unlockData = this.skillUnlockSystem?.getData() || {};
+    const unlockData = this.skillSystem?.getToolData() || {};
     const entries = Object.entries(unlockData);
 
     const totalToolUses = entries.reduce((sum, [, info]) => sum + info.count, 0);

@@ -20,9 +20,9 @@ export const SKILL_CATEGORIES = [
 ];
 
 export class SkillPanel {
-  constructor(electronAPI, unlockSystem = null, agentStatsTracker = null, achievementSystem = null) {
+  constructor(electronAPI, skillSystem = null, agentStatsTracker = null, achievementSystem = null) {
     this.electronAPI = electronAPI;
-    this.unlockSystem = unlockSystem;
+    this.skillSystem = skillSystem;
     this.agentStatsTracker = agentStatsTracker;
     this.achievementSystem = achievementSystem;
     this.isOpen = false;
@@ -111,7 +111,7 @@ export class SkillPanel {
 
     // 合并 catalog + 实际使用记录
     const catalogNames = new Set(this._tools.map(t => t.name));
-    const unlockData = this.unlockSystem?.getData() || {};
+    const unlockData = this.skillSystem?.getToolData() || {};
     const extraTools = [];
     for (const [name, info] of Object.entries(unlockData)) {
       if (!catalogNames.has(name)) {
@@ -330,12 +330,12 @@ export class SkillPanel {
   }
 
   _renderToolCard(t) {
-    const stars = this.unlockSystem?.getStars(t.name) || 0;
-    const locked = !!this.unlockSystem && stars === 0;
+    const stars = this.skillSystem?.getToolStars(t.name) || 0;
+    const locked = !!this.skillSystem && stars === 0;
     const starStr = '\u2605'.repeat(stars) + '\u2606'.repeat(3 - stars);
     const desc = t.description ? this._escapeHtml(t.description.slice(0, 60)) : '\u2014';
     const name = this._escapeHtml(t.name);
-    const count = this.unlockSystem?.getData()[t.name]?.count || 0;
+    const count = this.skillSystem?.getToolData()[t.name]?.count || 0;
     const pluginTag = t.pluginId
       ? `<span class="skill-tag plugin">${this._escapeHtml(t.pluginId)}</span>`
       : '';

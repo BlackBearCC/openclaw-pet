@@ -27,7 +27,6 @@ import { ToolStatusBar } from './ui/ToolStatusBar.js';
 import { MiniCatSystem } from './pet/MiniCatSystem.js';
 import { SkillPanel, SKILL_CATEGORIES } from './ui/SkillPanel.js';
 import { WorkspaceWatcher } from './pet/WorkspaceWatcher.js';
-import { SkillUnlockSystem } from './pet/SkillUnlockSystem.js';
 import { AgentConnections } from './ui/AgentConnections.js';
 import { AgentStatsTracker } from './pet/AgentStatsTracker.js';
 import { AchievementSystem } from './pet/AchievementSystem.js';
@@ -36,7 +35,7 @@ import { BottomChatInput } from './ui/BottomChatInput.js';
 import { MarkdownPanel } from './ui/MarkdownPanel.js';
 import { HungerSystem } from './pet/HungerSystem.js';
 import { HealthSystem } from './pet/HealthSystem.js';
-import { KnowledgeSystem } from './pet/KnowledgeSystem.js';
+import { SkillSystem } from './pet/SkillSystem.js';
 import { PetAI } from './pet/PetAI.js';
 
 class OpenClawPet {
@@ -69,7 +68,7 @@ class OpenClawPet {
     this.moodSystem = new MoodSystem();
     this.hungerSystem = new HungerSystem();
     this.healthSystem = new HealthSystem();
-    this.knowledgeSystem = new KnowledgeSystem();
+    this.skillSystem = new SkillSystem();
     this.petAI = null; // 初始化在 init() 后（需要 electronAPI）
     this.renderer = null;
     this.behaviors = null;
@@ -87,7 +86,6 @@ class OpenClawPet {
     this.miniCatSystem = null;
     this.skillPanel = null;
     this.workspaceWatcher = null;
-    this.skillUnlockSystem = null;
     this.agentConnections = null;
     this.agentStatsTracker = null;
     this.achievementSystem = null;
@@ -284,9 +282,8 @@ class OpenClawPet {
     );
     this.miniCatSystem.start();
 
-    // 6h. 技能解锁成就系统
-    this.skillUnlockSystem = new SkillUnlockSystem();
-    this.skillUnlockSystem.onUnlock(({ toolName, stars, isNew }) => {
+    // 6h. 技能系统（工具熟练度 + 领悟积累）
+    this.skillSystem.onUnlock(({ toolName, stars, isNew }) => {
       const gain = isNew ? 5 : stars === 3 ? 15 : 8;
       this.intimacySystem.gain(gain);
       const msgs = isNew
@@ -301,7 +298,7 @@ class OpenClawPet {
     this.agentStatsTracker = new AgentStatsTracker();
 
     // 6h3. 成就系统
-    this.achievementSystem = new AchievementSystem(this.skillUnlockSystem, this.intimacySystem);
+    this.achievementSystem = new AchievementSystem(this.skillSystem, this.intimacySystem);
     this.achievementSystem.onUnlock((ach) => {
       this.bubble.show(`🏆 成就解锁：${ach.name}！${ach.icon}`, 4000);
       this.stateMachine.transition('happy', { force: true, duration: 3000 });
@@ -314,7 +311,7 @@ class OpenClawPet {
 
     // 6h4. 技能图鉴（注入所有子系统）
     this.skillPanel = new SkillPanel(
-      this.electronAPI, this.skillUnlockSystem,
+      this.electronAPI, this.skillSystem,
       this.agentStatsTracker, this.achievementSystem
     );
 
@@ -331,7 +328,7 @@ class OpenClawPet {
     // 6k. PetAI + 领悟系统
     if (this.electronAPI) {
       this.petAI = new PetAI(this.electronAPI);
-      this.knowledgeSystem.onEpiphany(({ domainName, recentTopics }) => {
+      this.skillSystem.onEpiphany(({ domainName, recentTopics }) => {
         this._handleEpiphany(domainName, recentTopics);
       });
     }
@@ -729,12 +726,9 @@ class OpenClawPet {
         const toolName = event.data?.tool || event.data?.name || 'working';
         if (event.data?.phase === 'start' || event.data?.status === 'running') {
           this.toolStatusBar.show(toolName);
-          this.skillUnlockSystem?.record(toolName);
-
-          // 工具调用 → 知识积累（按 SKILL_CATEGORIES 归类）
           const lowerTool = toolName.toLowerCase();
           const cat = SKILL_CATEGORIES.find(c => c.keys.some(k => lowerTool.includes(k)));
-          if (cat) this.knowledgeSystem.addToolUse(cat.name, toolName);
+          this.skillSystem.recordTool(toolName, cat?.name || null);
 
           // 子 session 工具追踪
           const isSubSession = event.sessionKey && !event.sessionKey.endsWith(':main');
@@ -811,16 +805,11 @@ class OpenClawPet {
       this.electronAPI.appendAgentMemory(eventText),
     ]);
 
-    // 存入 localStorage 技能图鉴
-    const skills = JSON.parse(localStorage.getItem('pet-realized-skills') || '[]');
-    skills.push({
-      skillName, skillTitle, skillDesc, summary, domainName,
-      realizedAt: Date.now(),
-    });
-    localStorage.setItem('pet-realized-skills', JSON.stringify(skills));
+    // 存入技能图鉴
+    this.skillSystem.addRealized({ skillName, skillTitle, skillDesc, summary, domainName, realizedAt: Date.now() });
 
     // 渲染冒泡（使用模板）
-    const bubbleText = KnowledgeSystem.renderBubble(bubble);
+    const bubbleText = SkillSystem.renderBubble(bubble);
     this.stateMachine.transition('happy', { force: true, duration: 2000 });
     setTimeout(() => this.bubble.show(bubbleText, 5000), 800);
 
@@ -906,7 +895,7 @@ class OpenClawPet {
     this.skillPanel?.destroy();
     this.agentConnections?.destroy();
     this.workspaceWatcher = null;
-    this.skillUnlockSystem = null;
+    this.skillSystem = null;
     this.agentStatsTracker = null;
     this.achievementSystem = null;
     this.bottomChatInput?.destroy();
