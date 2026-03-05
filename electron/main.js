@@ -254,16 +254,12 @@ function createWindow() {
       const sessionsJson = path.join(os.homedir(), '.openclaw', 'agents', 'main', 'sessions', 'sessions.json');
       if (!fs.existsSync(sessionsJson)) return false;
       const sessions = JSON.parse(fs.readFileSync(sessionsJson, 'utf-8'));
-      // 找最近活跃的 session（按 sessionFile mtime 排序）
-      const entries = Object.values(sessions).filter(s => s?.sessionFile && fs.existsSync(s.sessionFile));
-      if (entries.length === 0) return false;
-      entries.sort((a, b) => {
-        const mtimeA = fs.statSync(a.sessionFile).mtimeMs;
-        const mtimeB = fs.statSync(b.sessionFile).mtimeMs;
-        return mtimeB - mtimeA;
-      });
-      const sessionFile = entries[0].sessionFile;
-      if (!fs.existsSync(sessionFile)) return false;
+      // main agent 下可能有多个 session（如用户清空后开了新的），取最近活跃的
+      const mainEntries = Object.entries(sessions)
+        .filter(([k, s]) => k.startsWith('agent:main:') && s?.sessionFile && fs.existsSync(s.sessionFile));
+      if (mainEntries.length === 0) return false;
+      mainEntries.sort(([, a], [, b]) => fs.statSync(b.sessionFile).mtimeMs - fs.statSync(a.sessionFile).mtimeMs);
+      const sessionFile = mainEntries[0][1].sessionFile;
 
       // 读取最后一行获取 parentId
       const content = fs.readFileSync(sessionFile, 'utf-8').trimEnd();
