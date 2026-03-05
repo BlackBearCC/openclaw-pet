@@ -33,6 +33,7 @@ import { AgentStatsTracker } from './pet/AgentStatsTracker.js';
 import { AchievementSystem } from './pet/AchievementSystem.js';
 import { StreamingBubble } from './ui/StreamingBubble.js';
 import { BottomChatInput } from './ui/BottomChatInput.js';
+import { MarkdownPanel } from './ui/MarkdownPanel.js';
 
 class OpenClawPet {
   constructor() {
@@ -80,6 +81,7 @@ class OpenClawPet {
     this.agentStatsTracker = null;
     this.achievementSystem = null;
     this.streamingBubble = null;
+    this.markdownPanel = null;
     this.bottomChatInput = null;
 
     this._lastTime = 0;
@@ -184,14 +186,16 @@ class OpenClawPet {
 
     // 6. UI 组件
     this.bubble = new Bubble(this.bubbleContainer);
-    this.streamingBubble = new StreamingBubble(document.getElementById('pet-area'), this.bubble);
+    const petArea = document.getElementById('pet-area');
+    this.streamingBubble = new StreamingBubble(petArea, this.bubble);
+    this.markdownPanel = new MarkdownPanel(petArea);
     this.chatPanel = new ChatPanel(this.electronAPI, this.stateMachine, this.bubble);
     this.settingsPanel = new SettingsPanel(this.electronAPI);
 
     // 6a2. 底部快捷聊天
     this.bottomChatInput = new BottomChatInput(
-      document.getElementById('pet-area'),
-      this.electronAPI, this.stateMachine, this.streamingBubble
+      petArea,
+      this.electronAPI, this.stateMachine, this.streamingBubble, this.markdownPanel
     );
 
     // 6b. 文件拖拽分析（需在 bubble/chatPanel 初始化之后）
@@ -763,6 +767,7 @@ class OpenClawPet {
     this.achievementSystem = null;
     this.bottomChatInput?.destroy();
     this.streamingBubble?.destroy();
+    this.markdownPanel?.destroy();
     this.bubble?.destroy();
     this.chatPanel?.destroy();
     this.settingsPanel?.destroy();

@@ -1297,3 +1297,161 @@ html, body {
   0%, 60%, 100% { transform: translateY(0); opacity: 0.3; }
   30% { transform: translateY(-6px); opacity: 1; }
 }
+
+/* ===== Markdown 面板 — 替代碎片气泡显示完整 MD 内容 ===== */
+.md-panel {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 264px; /* 紧贴 canvas 上方 */
+  max-height: 290px;
+  background: var(--paper);
+  border: 2.5px solid var(--ink);
+  border-radius: 16px 14px 6px 14px / 14px 16px 14px 6px;
+  box-shadow: 4px 4px 0 var(--ink);
+  display: flex;
+  flex-direction: column;
+  z-index: 26;
+  overflow: hidden;
+  pointer-events: all;
+  opacity: 0;
+  transform: translateY(14px) scale(0.96);
+  transition: opacity 0.3s cubic-bezier(0.34, 1.2, 0.64, 1),
+              transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+.md-panel.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.md-panel.hiding {
+  opacity: 0 !important;
+  transform: translateY(-8px) scale(0.95) !important;
+  transition: opacity 0.35s ease, transform 0.35s ease !important;
+  pointer-events: none;
+}
+
+.md-panel-close {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  background: rgba(255, 249, 242, 0.9);
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+  cursor: pointer;
+  line-height: 1;
+  z-index: 2;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.md-panel-close:hover {
+  background: var(--clr-primary-light);
+}
+
+.md-panel-content {
+  padding: 10px 30px 10px 12px;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink);
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.md-panel-content::-webkit-scrollbar { width: 4px; }
+.md-panel-content::-webkit-scrollbar-track { background: transparent; }
+.md-panel-content::-webkit-scrollbar-thumb {
+  background: rgba(42, 42, 42, 0.25);
+  border-radius: 2px;
+}
+
+/* Markdown 元素样式 */
+.md-panel-content p { margin: 0 0 6px; }
+.md-panel-content p:last-child { margin-bottom: 0; }
+
+.md-panel-content strong { font-weight: 700; }
+.md-panel-content em { font-style: italic; }
+
+.md-panel-content code {
+  background: rgba(42, 42, 42, 0.08);
+  border: 1px solid rgba(42, 42, 42, 0.15);
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 11px;
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.md-panel-content pre {
+  background: rgba(42, 42, 42, 0.06);
+  border: 1.5px solid rgba(42, 42, 42, 0.15);
+  border-radius: 6px;
+  padding: 8px 10px;
+  overflow-x: auto;
+  margin: 6px 0;
+}
+
+.md-panel-content pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 11px;
+}
+
+.md-panel-content ul,
+.md-panel-content ol {
+  padding-left: 16px;
+  margin: 4px 0;
+}
+
+.md-panel-content li { margin: 2px 0; }
+
+.md-panel-content h1,
+.md-panel-content h2,
+.md-panel-content h3 {
+  font-size: 13px;
+  font-weight: 700;
+  margin: 6px 0 4px;
+  border-bottom: 1.5px solid var(--ink-faint);
+  padding-bottom: 2px;
+}
+
+.md-panel-content blockquote {
+  border-left: 3px solid var(--clr-primary);
+  padding-left: 8px;
+  margin: 4px 0;
+  color: var(--ink-light);
+}
+
+/* 表格 */
+.md-panel-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 6px 0;
+  font-size: 11px;
+}
+
+.md-panel-content th,
+.md-panel-content td {
+  border: 1.5px solid var(--ink);
+  padding: 4px 7px;
+  text-align: left;
+}
+
+.md-panel-content th {
+  background: rgba(42, 42, 42, 0.07);
+  font-weight: 700;
+}
+
+.md-panel-content tr:nth-child(even) td {
+  background: rgba(42, 42, 42, 0.03);
+}

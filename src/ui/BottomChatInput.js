@@ -1,9 +1,12 @@
 /**
  * BottomChatInput.js
  * 底部快捷聊天 — 浮动图标 + 紧凑输入框，AI 回复通过 StreamingBubble 展示
+ * 含 Markdown 的完整回复通过 MarkdownPanel 渲染（替代碎片气泡）
  *
  * 图标位置根据宠物在屏幕左/右侧动态切换。
  */
+
+import { hasMarkdown } from './MarkdownPanel.js';
 
 export class BottomChatInput {
   /**
@@ -11,12 +14,14 @@ export class BottomChatInput {
    * @param {object} electronAPI
    * @param {import('../pet/StateMachine').StateMachine} stateMachine
    * @param {import('./StreamingBubble').StreamingBubble} streamingBubble
+   * @param {import('./MarkdownPanel').MarkdownPanel} [markdownPanel]
    */
-  constructor(petArea, electronAPI, stateMachine, streamingBubble) {
+  constructor(petArea, electronAPI, stateMachine, streamingBubble, markdownPanel) {
     this.petArea = petArea;
     this.electronAPI = electronAPI;
     this.sm = stateMachine;
     this.streamingBubble = streamingBubble;
+    this.markdownPanel = markdownPanel || null;
 
     this.isOpen = false;
     this.isSending = false;
@@ -110,8 +115,15 @@ export class BottomChatInput {
 
       if (payload.state === 'final') {
         const finalText = this._extractText(payload.message) || this.streamedText || '喵？';
-        this.streamingBubble.appendText(finalText);
-        this.streamingBubble.finalize();
+        if (this.markdownPanel && hasMarkdown(finalText)) {
+          // 含 Markdown 语法 → 清掉碎片气泡，用面板完整展示
+          this.streamingBubble.clear();
+          this.markdownPanel.show(finalText);
+        } else {
+          // 纯对话 → 保持原有气泡行为
+          this.streamingBubble.appendText(finalText);
+          this.streamingBubble.finalize();
+        }
         this._finishSending(finalText);
       }
 
@@ -157,8 +169,14 @@ export class BottomChatInput {
   async _sendLegacy(text) {
     try {
       const resp = await this.electronAPI.chatWithAI(text);
-      this.streamingBubble.appendText(resp.text || '喵？');
-      this.streamingBubble.finalize();
+      const replyText = resp.text || '喵？';
+      if (this.markdownPanel && hasMarkdown(replyText)) {
+        this.streamingBubble.clear();
+        this.markdownPanel.show(replyText);
+      } else {
+        this.streamingBubble.appendText(replyText);
+        this.streamingBubble.finalize();
+      }
       this._finishSending(resp.text);
     } catch (e) {
       this.streamingBubble.appendText(`出错了: ${e.message}`);
