@@ -193,7 +193,7 @@ class OpenClawPet {
     this.bubble = new Bubble(this.bubbleContainer);
     const petArea = document.getElementById('pet-area');
     this.streamingBubble = new StreamingBubble(petArea, this.bubble);
-    this.markdownPanel = new MarkdownPanel(petArea);
+    this.markdownPanel = new MarkdownPanel(petArea, this.electronAPI);
     this.chatPanel = new ChatPanel(this.electronAPI, this.stateMachine, this.bubble);
     this.settingsPanel = new SettingsPanel(this.electronAPI);
 
@@ -490,9 +490,13 @@ class OpenClawPet {
       // mini-cat 元素也需要阻止穿透
       const miniCatEl = e.target.closest?.('.mini-cat');
       const bottomChatEl = e.target.closest?.('.bottom-chat-input.open') || e.target.closest?.('.bottom-chat-toggle');
+      const mdPanelEl = e.target.closest?.('.md-panel');
+      const contextMenuEl = e.target.closest?.('.custom-context-menu');
       const isOverPanel =
         !!miniCatEl ||
         !!bottomChatEl ||
+        !!mdPanelEl ||
+        !!contextMenuEl ||
         (chatPanel?.classList.contains('open') && chatPanel.contains(e.target)) ||
         (settingsPanel?.classList.contains('open') && settingsPanel.contains(e.target)) ||
         (skillPanel?.classList.contains('open') && skillPanel.contains(e.target));

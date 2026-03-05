@@ -1,22 +1,26 @@
 /**
  * MarkdownPanel.js
- * 完整 Markdown 面板 — AI 回复含表格/代码/列表时替代碎片气泡展示
+ * 完整 Markdown 面板 — AI 回复含表格/代码/列表时显示在角色左侧独立面板
  *
- * 位于宠物头顶（与流式气泡同区域），手绘漫画风格，支持滚动。
  * 流式 streaming 期间继续用 StreamingBubble 显示进度；
  * final 收到完整文本后调用 show()，清掉流式碎片，展示渲染好的 Markdown。
  */
 
+const MD_EXPAND_SIZE = { width: 600, height: 580 };
+
 export class MarkdownPanel {
-  /** @param {HTMLElement} container - #pet-area */
-  constructor(container) {
-    this._container = container;
+  /**
+   * @param {HTMLElement} _container - 保留参数兼容，实际挂到 document.body
+   * @param {object} [electronAPI]
+   */
+  constructor(_container, electronAPI) {
+    this._api = electronAPI || null;
     this._el = null;
     this._timer = null;
   }
 
   /**
-   * 显示 Markdown 面板
+   * 显示 Markdown 面板（在角色左侧）
    * @param {string} markdownText - 完整回复文本
    * @param {number} duration     - 自动关闭毫秒数，0=不自动关闭
    */
@@ -31,7 +35,11 @@ export class MarkdownPanel {
       : this._escape(markdownText).replace(/\n/g, '<br>');
 
     el.innerHTML = `
-      <button class="md-panel-close" title="关闭">×</button>
+      <div class="md-panel-header">
+        <span class="md-panel-icon">🐾</span>
+        <span class="md-panel-title">AI 回复</span>
+        <button class="md-panel-close" title="关闭">✕</button>
+      </div>
       <div class="md-panel-content markdown-body">${rendered}</div>
     `;
 
@@ -40,8 +48,11 @@ export class MarkdownPanel {
       this.hide();
     });
 
-    this._container.appendChild(el);
+    document.body.appendChild(el);
     this._el = el;
+
+    // 展开窗口向左留出面板空间
+    this._api?.expandWindow?.(true, MD_EXPAND_SIZE);
 
     requestAnimationFrame(() => el.classList.add('visible'));
 
@@ -57,12 +68,18 @@ export class MarkdownPanel {
     this._el.classList.add('hiding');
     const el = this._el;
     this._el = null;
-    setTimeout(() => { if (el.parentNode) el.remove(); }, 400);
+    setTimeout(() => {
+      if (el.parentNode) el.remove();
+    }, 400);
+    this._api?.expandWindow?.(false);
   }
 
   isVisible() { return !!this._el; }
 
-  destroy() { this._clear(); }
+  destroy() {
+    this._clear();
+    this._api?.expandWindow?.(false);
+  }
 
   // ─── 内部 ───
 
