@@ -25,7 +25,7 @@ export class Behaviors {
       maxIdleTime: 10000,      // 最多待机时间
       walkSpeed: 1.5,          // 走动速度(px/frame)
       walkDuration: 3000,      // 走动持续时间
-      sleepThreshold: 60000,   // 无互动多久后打盹
+      sleepThreshold: 600000,  // 无互动多久后打盹（10分钟）
       bounds: {                // 活动范围
         left: 0,
         right: options.screenWidth || 800,

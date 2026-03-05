@@ -584,6 +584,9 @@ class OpenClawPet {
 
     // 活动窗口感知
     this.electronAPI.onForegroundAppChanged?.((data) => {
+      // 桌面有操作 → 重置睡眠计时
+      this.behaviors.recordInteraction();
+
       // 停靠中 → 窗口切换自动解除
       if (this._dockingEnabled) {
         this._disableDocking();
