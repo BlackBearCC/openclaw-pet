@@ -144,6 +144,9 @@ export class BottomChatInput {
     const text = this.inputEl.value.trim();
     if (!text || this.isSending) return;
 
+    // 发送新消息时关闭上一条 Markdown 面板
+    this.markdownPanel?.hide();
+
     this.inputEl.value = '';
     this.isSending = true;
     this.sendBtn.disabled = true;
