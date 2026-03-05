@@ -166,9 +166,6 @@ export class SettingsPanel {
       }
     }
 
-    if (this.electronAPI?.expandWindow) {
-      this.electronAPI.expandWindow(true);
-    }
   }
 
   async _save() {
@@ -219,10 +216,10 @@ export class SettingsPanel {
     if (!this.isOpen) return;
     this.isOpen = false;
     this.element.classList.remove('open');
+  }
 
-    if (this.electronAPI?.expandWindow) {
-      this.electronAPI.expandWindow(false);
-    }
+  closeQuiet() {
+    this.close();
   }
 
   destroy() {

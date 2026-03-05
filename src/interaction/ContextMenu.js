@@ -75,9 +75,9 @@ export class ContextMenu {
     // 入场动画
     requestAnimationFrame(() => menu.classList.add('visible'));
 
-    // 点击外部或按 Esc 关闭
+    // 点击外部或按 Esc 关闭（用 click 而非 mousedown，避免 mousedown 时移除 DOM 导致按钮 click 不触发）
     setTimeout(() => {
-      document.addEventListener('mousedown', this._dismiss, { once: true });
+      document.addEventListener('click', this._dismiss, { once: true });
     }, 0);
     document.addEventListener('keydown', this._onKeyDown = (e) => {
       if (e.key === 'Escape') this._dismiss();
@@ -88,7 +88,7 @@ export class ContextMenu {
     if (!this._menu) return;
     this._menu.remove();
     this._menu = null;
-    document.removeEventListener('mousedown', this._dismiss);
+    document.removeEventListener('click', this._dismiss);
   }
 
   destroy() {

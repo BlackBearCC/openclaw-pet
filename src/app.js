@@ -343,8 +343,8 @@ class OpenClawPet {
       const api = this.electronAPI;
       this.contextMenu = new ContextMenu(this.canvas, [
         { icon: '💬', label: '打开聊天',   action: () => this.chatPanel.toggle() },
-        { icon: '⚙️', label: '设置',       action: () => { this.chatPanel.isOpen && this.chatPanel.close(); this.skillPanel.isOpen && this.skillPanel.close(); this.settingsPanel.open(); } },
-        { icon: '📖', label: '图鉴',       action: () => { this.chatPanel.isOpen && this.chatPanel.close(); this.settingsPanel.isOpen && this.settingsPanel.close(); this.skillPanel.toggle(); } },
+        { icon: '⚙️', label: '设置',       action: () => { this.chatPanel.isOpen && this.chatPanel.closeQuiet(); this.skillPanel.isOpen && this.skillPanel.closeQuiet(); this.settingsPanel.open(); } },
+        { icon: '📖', label: '图鉴',       action: () => { this.chatPanel.isOpen && this.chatPanel.closeQuiet(); this.settingsPanel.isOpen && this.settingsPanel.closeQuiet(); this.skillPanel.toggle(); } },
         { type: 'separator' },
         { icon: '🍤', label: '喂零食',     action: () => { if (!this.feedingAnimator.isPlaying) { this.behaviors.recordInteraction(); this.feedingAnimator.play(() => { this.moodSystem.gain(20); this.intimacySystem.gain(10); this.bubble.show(['好吃！~ 😋','喵呜~ 谢谢主人！','啊好香！还有吗！'][Math.floor(Math.random()*3)], 3000); }); } } },
         { type: 'separator' },

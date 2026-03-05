@@ -51,9 +51,6 @@ export class MarkdownPanel {
     document.body.appendChild(el);
     this._el = el;
 
-    // 展开窗口向左留出面板空间
-    this._api?.expandWindow?.(true, MD_EXPAND_SIZE);
-
     requestAnimationFrame(() => el.classList.add('visible'));
 
     if (duration > 0) {
@@ -71,14 +68,12 @@ export class MarkdownPanel {
     setTimeout(() => {
       if (el.parentNode) el.remove();
     }, 400);
-    this._api?.expandWindow?.(false);
   }
 
   isVisible() { return !!this._el; }
 
   destroy() {
     this._clear();
-    this._api?.expandWindow?.(false);
   }
 
   // ─── 内部 ───

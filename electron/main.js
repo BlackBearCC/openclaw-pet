@@ -29,8 +29,6 @@ app.on('second-instance', () => {
 let mainWindow = null;
 let llmService = null;
 let win32Monitor = null;
-let isExpanded = false;
-let expandedSize = null; // 当前展开的尺寸（用于正确收缩）
 let clipboardInterval = null;
 let lastClipboardText = '';
 
@@ -44,9 +42,8 @@ function detectClipboardType(text) {
   return 'text';
 }
 
-// ===== 窗口尺寸 =====
-const PET_SIZE = { width: 280, height: 580 };
-const EXPANDED_SIZE = { width: 576, height: 520 };
+// ===== 窗口尺寸（固定大小，不再动态 resize）=====
+const PET_SIZE = { width: 620, height: 580 };
 
 function createWindow() {
   const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
@@ -128,27 +125,8 @@ function createWindow() {
     if (win32Monitor) win32Monitor.stopDockTracking();
   });
 
-  // ===== IPC: 窗口展开/收缩 =====
-  ipcMain.on('expand-window', (event, expand, customSize) => {
-    if (!mainWindow) return;
-    const [x, y] = mainWindow.getPosition();
-    const targetSize = customSize || EXPANDED_SIZE;
-
-    if (expand && !isExpanded) {
-      isExpanded = true;
-      expandedSize = targetSize;
-      const newX = Math.max(0, x - (targetSize.width - PET_SIZE.width));
-      const newY = Math.max(0, y - (targetSize.height - PET_SIZE.height));
-      mainWindow.setBounds({ x: newX, y: newY, width: targetSize.width, height: targetSize.height });
-    } else if (!expand && isExpanded) {
-      const restoreSize = expandedSize || EXPANDED_SIZE;
-      isExpanded = false;
-      expandedSize = null;
-      const newX = x + (restoreSize.width - PET_SIZE.width);
-      const newY = y + (restoreSize.height - PET_SIZE.height);
-      mainWindow.setBounds({ x: newX, y: newY, width: PET_SIZE.width, height: PET_SIZE.height });
-    }
-  });
+  // ===== IPC: 窗口展开/收缩（no-op，窗口固定大小）=====
+  ipcMain.on('expand-window', () => {});
 
   // ===== IPC: LLM 对话（兼容旧接口） =====
   ipcMain.handle('chat-with-ai', async (event, message) => {

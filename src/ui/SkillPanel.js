@@ -59,7 +59,6 @@ export class SkillPanel {
   async open() {
     this.isOpen = true;
     this.element.classList.add('open');
-    this.electronAPI?.expandWindow(true);
     await this._loadAndRender();
   }
 
@@ -67,7 +66,10 @@ export class SkillPanel {
     if (!this.isOpen) return;
     this.isOpen = false;
     this.element.classList.remove('open');
-    this.electronAPI?.expandWindow(false);
+  }
+
+  closeQuiet() {
+    this.close();
   }
 
   toggle() {

@@ -352,11 +352,6 @@ export class ChatPanel {
     if (this.isOpen) return;
     this.isOpen = true;
     this.element.classList.add('open');
-
-    if (this.electronAPI?.expandWindow) {
-      this.electronAPI.expandWindow(true);
-    }
-
     setTimeout(() => this.inputEl.focus(), 100);
   }
 
@@ -364,10 +359,10 @@ export class ChatPanel {
     if (!this.isOpen) return;
     this.isOpen = false;
     this.element.classList.remove('open');
+  }
 
-    if (this.electronAPI?.expandWindow) {
-      this.electronAPI.expandWindow(false);
-    }
+  closeQuiet() {
+    this.close();
   }
 
   toggle() {
