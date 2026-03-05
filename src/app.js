@@ -543,6 +543,11 @@ class OpenClawPet {
       const bottomChatEl = e.target.closest?.('.bottom-chat-input.open') || e.target.closest?.('.bottom-chat-toggle');
       const mdPanelEl = e.target.closest?.('.md-panel');
       const contextMenuEl = e.target.closest?.('.custom-context-menu');
+      // 右键菜单展开中 → 全局禁止穿透，确保点击任何区域都能关闭菜单
+      if (document.querySelector('.custom-context-menu')) {
+        this.electronAPI.setIgnoreMouse(false);
+        return;
+      }
       const isOverPanel =
         !!miniCatEl ||
         !!bottomChatEl ||
