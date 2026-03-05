@@ -36,7 +36,7 @@ export class SkillPanel {
     this.element.id = 'skill-panel';
     this.element.innerHTML = `
       <div class="skill-header">
-        <span>📖 技能图鉴</span>
+        <span>📖 图鉴</span>
         <button class="skill-close">✕</button>
       </div>
       <div class="almanac-tabs">
