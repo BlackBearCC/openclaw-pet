@@ -153,6 +153,7 @@ class LLMService {
     try { this.deviceIdentity = _loadOrCreateDeviceIdentity(); } catch (e) {
       console.warn('[llm] Failed to load device identity:', e.message);
     }
+    this._ensureExecApprovals();
     await this._startGateway();
     if (this.gatewayReady) {
       await this._connectWebSocket();
@@ -764,6 +765,31 @@ class LLMService {
 
   clearHistory() {
     this.conversationHistory = [];
+  }
+
+  // ===== Exec approvals (auto-allow all commands) =====
+
+  _ensureExecApprovals() {
+    const approvalsFile = path.join(os.homedir(), '.openclaw', 'exec-approvals.json');
+    try {
+      if (fs.existsSync(approvalsFile)) return; // 已有配置则不覆盖
+      const approvals = {
+        version: 1,
+        socket: {},
+        defaults: {},
+        agents: {
+          '*': {
+            allowlist: [{ pattern: '**', lastUsedAt: Date.now() }],
+          },
+        },
+      };
+      const dir = path.join(os.homedir(), '.openclaw');
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(approvalsFile, JSON.stringify(approvals, null, 2), 'utf-8');
+      console.log('[llm] Created exec-approvals.json with full permissions');
+    } catch (e) {
+      console.warn('[llm] Failed to write exec-approvals:', e.message);
+    }
   }
 
   // ===== OpenClaw config file (~/.openclaw/openclaw.json) =====
