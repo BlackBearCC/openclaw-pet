@@ -630,7 +630,12 @@ class OpenClawPet {
       this.bubble.show('对话已清空~ 重新开始吧！', 2000);
     });
 
-    // AI 聊天回复完成 → 亲密度 +3 + 饱腹（按回复长度）+ 知识积累 + 成就检查
+    // 用户发送消息 → 知识积累（用户原文）
+    this.chatPanel.onSend((userText) => {
+      this.knowledgeSystem.addFragment(userText);
+    });
+
+    // AI 聊天回复完成 → 亲密度 +3 + 饱腹（按回复长度）+ 知识积累（AI 回复）+ 成就检查
     this.electronAPI.onChatStream?.((payload) => {
       if (payload?.state === 'final') {
         this.intimacySystem.gain(3);

@@ -254,10 +254,15 @@ function createWindow() {
       const sessionsJson = path.join(os.homedir(), '.openclaw', 'agents', 'main', 'sessions', 'sessions.json');
       if (!fs.existsSync(sessionsJson)) return false;
       const sessions = JSON.parse(fs.readFileSync(sessionsJson, 'utf-8'));
-      const current = sessions['agent:main:main'];
-      if (!current?.sessionFile) return false;
-
-      const sessionFile = current.sessionFile;
+      // 找最近活跃的 session（按 sessionFile mtime 排序）
+      const entries = Object.values(sessions).filter(s => s?.sessionFile && fs.existsSync(s.sessionFile));
+      if (entries.length === 0) return false;
+      entries.sort((a, b) => {
+        const mtimeA = fs.statSync(a.sessionFile).mtimeMs;
+        const mtimeB = fs.statSync(b.sessionFile).mtimeMs;
+        return mtimeB - mtimeA;
+      });
+      const sessionFile = entries[0].sessionFile;
       if (!fs.existsSync(sessionFile)) return false;
 
       // 读取最后一行获取 parentId
