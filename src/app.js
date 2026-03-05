@@ -806,7 +806,7 @@ class OpenClawPet {
     ]);
 
     // 存入技能图鉴
-    this.skillSystem.addRealized({ skillName, skillTitle, skillDesc, summary, domainName, realizedAt: Date.now() });
+    this.skillSystem.addRealized({ skillName, skillTitle, skillDesc, skillContent, summary, domainName, realizedAt: Date.now() });
 
     // 渲染冒泡（使用模板）
     const bubbleText = SkillSystem.renderBubble(bubble);

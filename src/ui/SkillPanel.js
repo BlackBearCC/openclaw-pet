@@ -36,8 +36,8 @@ export class SkillPanel {
     this.element.id = 'skill-panel';
     this.element.innerHTML = `
       <div class="skill-header">
-        <span>\uD83D\uDCD6 \u56FE\u9274</span>
-        <button class="skill-close">\u2715</button>
+        <span>📖 技能图鉴</span>
+        <button class="skill-close">✕</button>
       </div>
       <div class="almanac-tabs">
         <button class="almanac-tab active" data-tab="tools">\uD83D\uDD27 \u5DE5\u5177</button>
@@ -139,7 +139,7 @@ export class SkillPanel {
 
   // ===== 技能图鉴 =====
   _renderSkillsTab(body) {
-    const realizedSkills = JSON.parse(localStorage.getItem('pet-realized-skills') || '[]');
+    const realizedSkills = this.skillSystem?.getRealizedSkills() || [];
 
     // 按分类统计领悟技能数量
     const countByDomain = {};
@@ -147,47 +147,73 @@ export class SkillPanel {
       countByDomain[s.domainName] = (countByDomain[s.domainName] || 0) + 1;
     }
 
-    const cards = SKILL_CATEGORIES.map(cat => {
+    const catCards = SKILL_CATEGORIES.map(cat => {
       const count = countByDomain[cat.name] || 0;
       const unlocked = count > 0;
       const stars = count >= 7 ? 3 : count >= 3 ? 2 : count >= 1 ? 1 : 0;
-      const starStr = '\u2605'.repeat(stars) + '\u2606'.repeat(3 - stars);
-
+      const starStr = '★'.repeat(stars) + '☆'.repeat(3 - stars);
       return `
-        <div class="skill-card ${unlocked ? '' : 'skill-locked'}">
-          <div class="skill-card-name">${cat.icon} ${cat.name}</div>
-          ${unlocked
-            ? `<div class="skill-card-stars" title="已领悟 ${count} 个技能">${starStr}</div>`
-            : '<div class="skill-card-locked-label">\uD83D\uDD12 尚未领悟</div>'
-          }
+        <div class="book-domain-card ${unlocked ? '' : 'book-domain-locked'}">
+          <span class="book-domain-icon">${cat.icon}</span>
+          <span class="book-domain-name">${cat.name}</span>
+          <span class="book-domain-stars">${unlocked ? starStr : '🔒'}</span>
         </div>
       `;
     }).join('');
 
     const unlockedCount = SKILL_CATEGORIES.filter(cat => countByDomain[cat.name] > 0).length;
 
-    // 领悟技能列表
     const realizedHtml = realizedSkills.length === 0
-      ? '<div class="skill-realized-empty">还没有领悟任何技能，多和我聊聊吧~ 🐾</div>'
-      : realizedSkills.map(s => {
+      ? '<div class="book-empty-hint">还没有领悟任何技能，<br>多使用工具探索世界吧~ 🐾</div>'
+      : realizedSkills.slice().reverse().map((s, i) => {
           const date = new Date(s.realizedAt).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
           return `
-            <div class="skill-realized-card">
-              <div class="skill-realized-title">✨ ${s.skillTitle}</div>
-              <div class="skill-realized-domain">${s.domainName} · ${date}</div>
-              <div class="skill-realized-summary">${s.summary}</div>
+            <div class="book-skill-entry" data-idx="${realizedSkills.length - 1 - i}">
+              <div class="book-skill-entry-title">✦ ${this._escapeHtml(s.skillTitle)}</div>
+              <div class="book-skill-entry-meta">${this._escapeHtml(s.domainName)} · ${date}</div>
+              <div class="book-skill-entry-summary">${this._escapeHtml(s.summary)}</div>
+              <div class="book-skill-entry-arrow">›</div>
             </div>
           `;
         }).join('');
 
     body.innerHTML = `
-      <div class="skill-count">共 ${SKILL_CATEGORIES.length} 项技能（已解锁 ${unlockedCount}）</div>
-      <div class="skill-grid">${cards}</div>
-      <div class="skill-realized-section">
-        <div class="skill-realized-header">💡 领悟技能（${realizedSkills.length}）</div>
-        ${realizedHtml}
-      </div>
+      <div class="book-section-title">技能领域</div>
+      <div class="book-domain-grid">${catCards}</div>
+      <div class="book-divider">✦ ✦ ✦</div>
+      <div class="book-section-title">领悟卷轴 <span class="book-count">${realizedSkills.length} / ∞</span></div>
+      ${realizedHtml}
     `;
+
+    // 绑定点击详情
+    body.querySelectorAll('.book-skill-entry').forEach(el => {
+      el.onclick = () => {
+        const idx = parseInt(el.dataset.idx);
+        this._showSkillDetail(realizedSkills[idx], body);
+      };
+    });
+  }
+
+  _showSkillDetail(skill, body) {
+    const date = new Date(skill.realizedAt).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+    const content = this._escapeHtml(skill.skillContent || skill.skillDesc || '（无详细内容）');
+
+    const detail = document.createElement('div');
+    detail.className = 'book-detail-page';
+    detail.innerHTML = `
+      <button class="book-detail-back">‹ 返回</button>
+      <div class="book-detail-domain">${this._escapeHtml(skill.domainName)} · ${date}</div>
+      <div class="book-detail-title">✦ ${this._escapeHtml(skill.skillTitle)}</div>
+      <div class="book-detail-divider"></div>
+      <div class="book-detail-content">${content.replace(/\n/g, '<br>')}</div>
+      <div class="book-detail-summary-label">— 心得 —</div>
+      <div class="book-detail-summary">${this._escapeHtml(skill.summary)}</div>
+    `;
+    detail.querySelector('.book-detail-back').onclick = () => detail.remove();
+
+    // 滑入
+    body.appendChild(detail);
+    requestAnimationFrame(() => detail.classList.add('visible'));
   }
 
   // ===== 分身图鉴 =====
