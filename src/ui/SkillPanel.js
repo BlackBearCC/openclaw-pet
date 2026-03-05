@@ -139,40 +139,34 @@ export class SkillPanel {
 
   // ===== 技能图鉴 =====
   _renderSkillsTab(body) {
-    const unlockData = this.unlockSystem?.getData() || {};
-    const allUsedKeys = Object.keys(unlockData).map(k => k.toLowerCase());
+    const realizedSkills = JSON.parse(localStorage.getItem('pet-realized-skills') || '[]');
+
+    // 按分类统计领悟技能数量
+    const countByDomain = {};
+    for (const s of realizedSkills) {
+      countByDomain[s.domainName] = (countByDomain[s.domainName] || 0) + 1;
+    }
 
     const cards = SKILL_CATEGORIES.map(cat => {
-      // 查找该技能分类下使用过的工具
-      const matched = cat.keys.filter(k => allUsedKeys.some(u => u.includes(k)));
-      const totalCount = cat.keys.reduce((sum, k) => {
-        for (const [name, info] of Object.entries(unlockData)) {
-          if (name.toLowerCase().includes(k)) sum += info.count;
-        }
-        return sum;
-      }, 0);
-      const unlocked = matched.length > 0;
-      const stars = totalCount >= 20 ? 3 : totalCount >= 5 ? 2 : totalCount >= 1 ? 1 : 0;
+      const count = countByDomain[cat.name] || 0;
+      const unlocked = count > 0;
+      const stars = count >= 7 ? 3 : count >= 3 ? 2 : count >= 1 ? 1 : 0;
       const starStr = '\u2605'.repeat(stars) + '\u2606'.repeat(3 - stars);
 
       return `
         <div class="skill-card ${unlocked ? '' : 'skill-locked'}">
           <div class="skill-card-name">${cat.icon} ${cat.name}</div>
           ${unlocked
-            ? `<div class="skill-card-stars" title="累计使用 ${totalCount} 次">${starStr}</div>
-               <div class="skill-card-desc">相关工具：${matched.join(', ')}</div>`
-            : '<div class="skill-card-locked-label">\uD83D\uDD12 尚未触发</div>'
+            ? `<div class="skill-card-stars" title="已领悟 ${count} 个技能">${starStr}</div>`
+            : '<div class="skill-card-locked-label">\uD83D\uDD12 尚未领悟</div>'
           }
         </div>
       `;
     }).join('');
 
-    const unlockedCount = SKILL_CATEGORIES.filter(cat =>
-      cat.keys.some(k => allUsedKeys.some(u => u.includes(k)))
-    ).length;
+    const unlockedCount = SKILL_CATEGORIES.filter(cat => countByDomain[cat.name] > 0).length;
 
-    // 领悟技能（来自 KnowledgeSystem）
-    const realizedSkills = JSON.parse(localStorage.getItem('pet-realized-skills') || '[]');
+    // 领悟技能列表
     const realizedHtml = realizedSkills.length === 0
       ? '<div class="skill-realized-empty">还没有领悟任何技能，多和我聊聊吧~ 🐾</div>'
       : realizedSkills.map(s => {
