@@ -38,7 +38,7 @@ export class ToolStatusBar {
    */
   show(toolName, icon) {
     const resolvedIcon = icon || this._matchIcon(toolName) || '🔧';
-    const safeName = this._escapeHtml(this._truncate(toolName, 16));
+    const safeName = this._escapeHtml(this._truncate(toolName, 10));
 
     this.element.innerHTML = `
       <span class="tool-icon">${resolvedIcon}</span>

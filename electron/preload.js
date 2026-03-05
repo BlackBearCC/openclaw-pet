@@ -21,8 +21,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // === 窗口展开/收缩 ===
   expandWindow: (expand, customSize) => ipcRenderer.send('expand-window', expand, customSize),
 
-  // === 右键菜单 ===
-  showContextMenu: () => ipcRenderer.send('show-context-menu'),
+  // === 应用控制 ===
+  appQuit: () => ipcRenderer.send('app-quit'),
+  openDevTools: () => ipcRenderer.send('open-devtools'),
+  toggleAlwaysOnTop: () => ipcRenderer.invoke('toggle-always-on-top'),
 
   // === AI 对话（兼容旧接口） ===
   chatWithAI: (message) => ipcRenderer.invoke('chat-with-ai', message),

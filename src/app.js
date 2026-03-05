@@ -42,6 +42,7 @@ class OpenClawPet {
 
     this.spriteSheet = new SpriteSheet();
     this.kittenSheet = new SpriteSheet();
+    this.idleSheet = new SpriteSheet();
     // 额外动画 spritesheets
     this.sleepEnterSheet = new SpriteSheet();
     this.sleepLoopSheet = new SpriteSheet();
@@ -98,7 +99,8 @@ class OpenClawPet {
     const spritePath = '../assets/sprites/placeholder/';
     try {
       await Promise.all([
-        this.spriteSheet.load(spritePath + 'spritesheet.png', spritePath + 'spritesheet.json'),
+        this.spriteSheet.load(spritePath + 'spritesheet.png', spritePath + 'spritesheet.json')
+          .catch(() => console.warn('⚠️ spritesheet not found')),
         this.kittenSheet.load(spritePath + 'spritesheet-kitten.png', spritePath + 'spritesheet-kitten.json')
           .catch(() => console.warn('⚠️ Kitten spritesheet not found, using adult as fallback')),
         this.sleepEnterSheet.load(spritePath + 'sleep_enter.png', spritePath + 'sleep_enter.json')
@@ -129,6 +131,8 @@ class OpenClawPet {
           .catch(() => console.warn('⚠️ idle_ear_twitch spritesheet not found')),
         this.idleYawnSheet.load(spritePath + 'idle_yawn.png', spritePath + 'idle_yawn.json')
           .catch(() => console.warn('⚠️ idle_yawn spritesheet not found')),
+        this.idleSheet.load(spritePath + 'idle.png', spritePath + 'idle.json')
+          .catch(() => console.warn('⚠️ idle spritesheet not found')),
       ]);
       console.log('✅ Spritesheets loaded');
     } catch (e) {
@@ -159,6 +163,7 @@ class OpenClawPet {
     this.renderer.registerSheet('idle_butterfly', this.idleButterflySheet);
     this.renderer.registerSheet('idle_ear_twitch', this.idleEarTwitchSheet);
     this.renderer.registerSheet('idle_yawn', this.idleYawnSheet);
+    this.renderer.registerSheet('idle', this.idleSheet);
     this.renderer.registerCompound('sleep', 'sleep_enter', 'sleep_loop', 'sleep_exit');
     this.renderer.registerCompound('work', 'work_enter', 'work_loop', 'work_exit');
 
@@ -334,9 +339,21 @@ class OpenClawPet {
     );
 
     if (this.electronAPI) {
-      this.contextMenu = new ContextMenu(
-        this.canvas, this.electronAPI, this.behaviors
-      );
+      const api = this.electronAPI;
+      this.contextMenu = new ContextMenu(this.canvas, [
+        { icon: '💬', label: '打开聊天',   action: () => this.chatPanel.toggle() },
+        { icon: '⚙️', label: '设置',       action: () => { this.chatPanel.isOpen && this.chatPanel.close(); this.skillPanel.isOpen && this.skillPanel.close(); this.settingsPanel.open(); } },
+        { icon: '📖', label: '图鉴',       action: () => { this.chatPanel.isOpen && this.chatPanel.close(); this.settingsPanel.isOpen && this.settingsPanel.close(); this.skillPanel.toggle(); } },
+        { type: 'separator' },
+        { icon: '🍤', label: '喂零食',     action: () => { if (!this.feedingAnimator.isPlaying) { this.behaviors.recordInteraction(); this.feedingAnimator.play(() => { this.moodSystem.gain(20); this.intimacySystem.gain(10); this.bubble.show(['好吃！~ 😋','喵呜~ 谢谢主人！','啊好香！还有吗！'][Math.floor(Math.random()*3)], 3000); }); } } },
+        { type: 'separator' },
+        { icon: '📌', label: '置顶',       action: () => api.toggleAlwaysOnTop?.() },
+        { type: 'separator' },
+        { icon: '🗑️', label: '清空对话',   action: () => { api.clearChatHistory?.(); this.bubble.show('对话已清空~ 重新开始吧！', 2000); } },
+        { icon: '🔧', label: '开发者工具', action: () => api.openDevTools?.() },
+        { type: 'separator' },
+        { icon: '❌', label: '退出',       action: () => api.appQuit?.() },
+      ]);
     }
 
     // 7. 鼠标穿透

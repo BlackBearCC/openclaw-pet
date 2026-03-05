@@ -653,37 +653,107 @@ html, body {
   margin-top: 3px;
 }
 
-/* ===== 头顶状态条 ===== */
+/* ===== 自定义右键菜单 ===== */
+.custom-context-menu {
+  position: fixed;
+  z-index: 9999;
+  background: var(--paper);
+  border: var(--border-ink);
+  border-radius: var(--radius-sketchy);
+  box-shadow: var(--shadow-ink);
+  padding: 5px 0;
+  min-width: 148px;
+  opacity: 0;
+  transform: scale(0.92) translateY(-4px);
+  transform-origin: top left;
+  transition: opacity 0.15s ease, transform 0.15s cubic-bezier(0.34, 1.2, 0.64, 1);
+  pointer-events: none;
+}
+.custom-context-menu.visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  pointer-events: all;
+}
+.ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 5px 12px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+.ctx-item:hover {
+  background: var(--paper-warm);
+}
+.ctx-item:active {
+  background: var(--clr-primary-light);
+}
+.ctx-icon {
+  font-size: 13px;
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.ctx-label { flex: 1; }
+.ctx-check {
+  font-size: 11px;
+  color: var(--clr-primary-dark);
+  font-weight: 700;
+  width: 14px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.ctx-separator {
+  height: 1.5px;
+  background: var(--ink-faint);
+  margin: 4px 10px;
+}
+
+/* ===== 工具状态小标签（最新气泡左下角） ===== */
 .tool-status-bar {
   position: absolute;
-  bottom: 134px;
-  left: 50%;
-  transform: translateX(-50%) scale(0.8);
-  background: var(--ink);
-  color: white;
-  border: 2px solid var(--ink);
-  border-radius: var(--radius-sketchy-pill);
-  padding: 3px 10px;
-  font-size: 11px;
+  bottom: 252px;
+  left: 8px;
+  transform: scale(0.85);
+  transform-origin: bottom left;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius-sketchy-sm);
+  padding: 2px 6px;
+  font-size: 9px;
   font-weight: 600;
   white-space: nowrap;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   opacity: 0;
-  transition: opacity 0.3s, transform 0.3s;
+  transition: opacity 0.25s, transform 0.25s;
   pointer-events: none;
   z-index: 15;
-  box-shadow: 2px 2px 0 rgba(42, 42, 42, 0.3);
+  box-shadow: 1px 1px 0 var(--ink);
 }
 .tool-status-bar.visible {
   opacity: 1;
-  transform: translateX(-50%) scale(1);
+  transform: scale(1);
+  transform-origin: bottom left;
+}
+.tool-icon {
+  font-size: 10px;
+  line-height: 1;
 }
 .tool-spinner {
-  width: 8px; height: 8px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-top-color: white;
+  width: 6px; height: 6px;
+  border: 1.5px solid var(--ink-faint);
+  border-top-color: var(--ink);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -1108,12 +1178,12 @@ html, body {
 
 .bottom-chat-toggle {
   position: absolute;
-  bottom: 4px;
-  left: 4px;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 2px solid var(--ink);
+  bottom: 6px;
+  left: 6px;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sketchy-sm);
+  border: var(--border-ink);
   background: var(--paper);
   color: var(--ink);
   cursor: pointer;
@@ -1129,19 +1199,20 @@ html, body {
 }
 .bottom-chat-toggle.right {
   left: auto;
-  right: 4px;
+  right: 6px;
 }
 .bottom-chat-toggle:hover {
-  transform: scale(1.12);
-  background: var(--clr-primary-light);
+  transform: scale(1.1) rotate(-2deg);
+  background: var(--paper-warm);
 }
 .bottom-chat-toggle:active {
-  transform: scale(0.95);
+  transform: scale(0.93);
   box-shadow: 1px 1px 0 var(--ink);
 }
 .bottom-chat-toggle.active {
   background: var(--clr-primary);
   color: white;
+  box-shadow: 2px 2px 0 var(--ink);
 }
 
 /* 输入栏 */
@@ -1201,7 +1272,7 @@ html, body {
 .bottom-chat-send {
   width: 30px;
   height: 30px;
-  border-radius: 50%;
+  border-radius: var(--radius-sketchy-sm);
   border: 2px solid var(--ink);
   background: var(--clr-primary);
   color: white;

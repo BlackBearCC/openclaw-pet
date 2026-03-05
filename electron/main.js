@@ -224,62 +224,13 @@ function createWindow() {
     return true;
   });
 
-  // ===== IPC: 右键菜单 =====
-  ipcMain.on('show-context-menu', () => {
-    const menu = Menu.buildFromTemplate([
-      {
-        label: '💬 打开聊天',
-        click: () => mainWindow.webContents.send('toggle-chat')
-      },
-      {
-        label: '⚙️ 设置',
-        click: () => mainWindow.webContents.send('open-settings')
-      },
-      {
-        label: '📖 图鉴',
-        click: () => mainWindow.webContents.send('open-skills')
-      },
-      { type: 'separator' },
-      {
-        label: '🍤 喂零食',
-        click: () => mainWindow.webContents.send('feed-pet')
-      },
-      {
-        label: '📏 大小',
-        submenu: [
-          { label: '小 (80px)', click: () => mainWindow.webContents.send('resize-pet', 80) },
-          { label: '中 (128px)', click: () => mainWindow.webContents.send('resize-pet', 128) },
-          { label: '大 (180px)', click: () => mainWindow.webContents.send('resize-pet', 180) },
-        ]
-      },
-      {
-        label: '📌 置顶',
-        type: 'checkbox',
-        checked: mainWindow.isAlwaysOnTop(),
-        click: (item) => mainWindow.setAlwaysOnTop(item.checked)
-      },
-      ...(win32Monitor?.available ? [{
-        label: '🪟 坐到窗口上',
-        type: 'checkbox',
-        checked: false,
-        click: (item) => mainWindow.webContents.send('toggle-docking', item.checked)
-      }] : []),
-      { type: 'separator' },
-      {
-        label: '🗑️ 清空对话',
-        click: () => {
-          llmService.clearHistory();
-          mainWindow.webContents.send('chat-cleared');
-        }
-      },
-      {
-        label: '🔧 开发者工具',
-        click: () => mainWindow.webContents.openDevTools({ mode: 'detach' })
-      },
-      { type: 'separator' },
-      { label: '❌ 退出', click: () => app.quit() }
-    ]);
-    menu.popup({ window: mainWindow });
+  // ===== IPC: 应用控制（自定义右键菜单调用） =====
+  ipcMain.on('app-quit', () => app.quit());
+  ipcMain.on('open-devtools', () => mainWindow.webContents.openDevTools({ mode: 'detach' }));
+  ipcMain.handle('toggle-always-on-top', () => {
+    const next = !mainWindow.isAlwaysOnTop();
+    mainWindow.setAlwaysOnTop(next);
+    return next;
   });
 
   // 渲染进程日志转发
