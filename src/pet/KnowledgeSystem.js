@@ -2,43 +2,14 @@
  * KnowledgeSystem.js
  * 知识积累 + 领悟触发系统
  *
- * 每次 AI 对话完成时分析关键词 → 归类到知识域
- * 当某知识域积累达到阈值 → 触发领悟事件（onEpiphany 回调）
+ * 通过工具调用信号（而非关键词匹配）累积各技能分类的经验值。
+ * 当某分类积累达到阈值 → 触发领悟事件（onEpiphany 回调）
  *
  * 冷却规则：
- *   - 首次领悟阈值：5 条对话碎片
- *   - 后续：每次 +10 条
+ *   - 首次领悟阈值：5 次工具调用
+ *   - 后续：每次 +10
  *   - 全局冷却：上次领悟后 24 小时内不再触发
  */
-
-const DOMAINS = {
-  code: {
-    name: '编程/技术',
-    keywords: ['代码', '函数', 'bug', 'error', '调试', '算法', 'class', 'import', 'async',
-               '组件', 'api', '接口', '数据库', 'git', 'npm', 'python', 'javascript',
-               'typescript', '编译', '部署', 'react', 'vue', 'node', '请求', '响应', '报错'],
-  },
-  creative: {
-    name: '创作/设计',
-    keywords: ['设计', '排版', '配色', '字体', 'ui', '插画', '写作', '文案', '风格', '创意',
-               '美观', '视觉', 'logo', '海报', '动画', '原型', '交互', '用户体验', '图片'],
-  },
-  science: {
-    name: '科学/自然',
-    keywords: ['物理', '数学', '化学', '生物', '宇宙', '数据', '统计', '公式', '实验',
-               '研究', '论文', '科学', '模型', '分析', '机器学习', '神经网络', '推导'],
-  },
-  humanities: {
-    name: '人文/哲学',
-    keywords: ['历史', '哲学', '文化', '文学', '心理', '社会', '经济', '政治', '艺术',
-               '音乐', '电影', '故事', '意义', '价值', '思考', '记忆', '情感', '语言'],
-  },
-  daily: {
-    name: '日常/情感',
-    keywords: ['今天', '感觉', '心情', '朋友', '家人', '生活', '工作', '休息', '吃饭',
-               '睡觉', '开心', '难过', '压力', '累', '放松', '周末', '假期', '计划'],
-  },
-};
 
 // 领悟冒泡模板（可扩展，{{insight}} 为 AI 生成内容）
 export const EPIPHANY_TEMPLATES = [
@@ -51,7 +22,7 @@ export const EPIPHANY_TEMPLATES = [
 export class KnowledgeSystem {
   constructor() {
     const saved = JSON.parse(localStorage.getItem('pet-knowledge') || 'null');
-    this._data = saved || this._initData();
+    this._data = saved || { domains: {}, lastEpiphanyAt: 0 };
     this._callbacks = [];
     this._triggering = false;
 
@@ -60,39 +31,24 @@ export class KnowledgeSystem {
     ));
   }
 
-  _initData() {
-    const domains = {};
-    for (const key of Object.keys(DOMAINS)) {
-      domains[key] = { count: 0, nextThreshold: 5, recentTopics: [] };
-    }
-    return { domains, lastEpiphanyAt: 0 };
-  }
-
   /**
-   * 分析一段对话文本，累加知识域碎片
-   * @param {string} text  对话内容
+   * 记录一次工具调用，归入对应技能分类
+   * @param {string} domainName  技能分类名（来自 SKILL_CATEGORIES，如 '代码编写'）
+   * @param {string} toolName    实际工具名，记录为 recentTopics 供 PetAI 参考
    */
-  addFragment(text) {
-    const lower = text.toLowerCase();
-    let updated = false;
+  addToolUse(domainName, toolName) {
+    if (!domainName) return;
 
-    for (const [key, domain] of Object.entries(DOMAINS)) {
-      const hits = domain.keywords.filter(kw => lower.includes(kw));
-      if (hits.length === 0) continue;
-
-      const d = this._data.domains[key];
-      d.count++;
-      for (const kw of hits) {
-        if (!d.recentTopics.includes(kw)) d.recentTopics.push(kw);
-      }
-      if (d.recentTopics.length > 12) d.recentTopics = d.recentTopics.slice(-12);
-      updated = true;
+    if (!this._data.domains[domainName]) {
+      this._data.domains[domainName] = { count: 0, nextThreshold: 5, recentTopics: [] };
     }
+    const d = this._data.domains[domainName];
+    d.count++;
+    if (toolName && !d.recentTopics.includes(toolName)) d.recentTopics.push(toolName);
+    if (d.recentTopics.length > 12) d.recentTopics = d.recentTopics.slice(-12);
 
-    if (updated) {
-      this._save();
-      this._checkEpiphany();
-    }
+    this._save();
+    this._checkEpiphany();
   }
 
   _checkEpiphany() {
@@ -107,21 +63,18 @@ export class KnowledgeSystem {
 
     if (ready.length === 0) return;
 
-    const [domainKey, domainData] = ready[0];
-    this._triggerEpiphany(domainKey, domainData);
+    const [domainName, domainData] = ready[0];
+    this._triggerEpiphany(domainName, domainData);
   }
 
-  _triggerEpiphany(domainKey, domainData) {
+  _triggerEpiphany(domainName, domainData) {
     this._triggering = true;
-    // 立即更新阈值和冷却，防止重复触发
-    this._data.domains[domainKey].nextThreshold = domainData.count + 10;
+    this._data.domains[domainName].nextThreshold = domainData.count + 10;
     this._data.lastEpiphanyAt = Date.now();
     this._save();
 
-    const domainName = DOMAINS[domainKey].name;
     const recentTopics = [...domainData.recentTopics];
-
-    this._callbacks.forEach(cb => cb({ domainKey, domainName, recentTopics }));
+    this._callbacks.forEach(cb => cb({ domainName, recentTopics }));
     this._triggering = false;
   }
 
@@ -137,7 +90,6 @@ export class KnowledgeSystem {
   }
 
   getData() { return this._data; }
-  getDomains() { return DOMAINS; }
 
   _save() {
     localStorage.setItem('pet-knowledge', JSON.stringify(this._data));

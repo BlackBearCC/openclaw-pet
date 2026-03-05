@@ -25,7 +25,7 @@ import { IntimacySystem } from './pet/IntimacySystem.js';
 import { FileDropHandler } from './interaction/FileDropHandler.js';
 import { ToolStatusBar } from './ui/ToolStatusBar.js';
 import { MiniCatSystem } from './pet/MiniCatSystem.js';
-import { SkillPanel } from './ui/SkillPanel.js';
+import { SkillPanel, SKILL_CATEGORIES } from './ui/SkillPanel.js';
 import { WorkspaceWatcher } from './pet/WorkspaceWatcher.js';
 import { SkillUnlockSystem } from './pet/SkillUnlockSystem.js';
 import { AgentConnections } from './ui/AgentConnections.js';
@@ -630,18 +630,12 @@ class OpenClawPet {
       this.bubble.show('对话已清空~ 重新开始吧！', 2000);
     });
 
-    // 用户发送消息 → 知识积累（用户原文）
-    this.chatPanel.onSend((userText) => {
-      this.knowledgeSystem.addFragment(userText);
-    });
-
-    // AI 聊天回复完成 → 亲密度 +3 + 饱腹（按回复长度）+ 知识积累（AI 回复）+ 成就检查
+    // AI 聊天回复完成 → 亲密度 +3 + 饱腹（按回复长度）+ 成就检查
     this.electronAPI.onChatStream?.((payload) => {
       if (payload?.state === 'final') {
         this.intimacySystem.gain(3);
         const msg = payload.message || '';
         this.hungerSystem.onChatFinal(msg.length);
-        this.knowledgeSystem.addFragment(msg);
         this._chatCompletionCount++;
         localStorage.setItem('pet-chat-count', String(this._chatCompletionCount));
         this.achievementSystem?.check();
@@ -736,6 +730,11 @@ class OpenClawPet {
         if (event.data?.phase === 'start' || event.data?.status === 'running') {
           this.toolStatusBar.show(toolName);
           this.skillUnlockSystem?.record(toolName);
+
+          // 工具调用 → 知识积累（按 SKILL_CATEGORIES 归类）
+          const lowerTool = toolName.toLowerCase();
+          const cat = SKILL_CATEGORIES.find(c => c.keys.some(k => lowerTool.includes(k)));
+          if (cat) this.knowledgeSystem.addToolUse(cat.name, toolName);
 
           // 子 session 工具追踪
           const isSubSession = event.sessionKey && !event.sessionKey.endsWith(':main');

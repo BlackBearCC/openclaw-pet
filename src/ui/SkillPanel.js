@@ -9,7 +9,7 @@
  */
 
 // 技能分类：把工具归入更高层的技能
-const SKILL_CATEGORIES = [
+export const SKILL_CATEGORIES = [
   { name: '信息检索',  icon: '🔍', keys: ['web_search', 'fetch', 'browser', 'websearch'] },
   { name: '代码编写',  icon: '💻', keys: ['read', 'write', 'edit', 'read_file', 'write_file'] },
   { name: '代码搜索',  icon: '🔎', keys: ['grep', 'glob', 'search'] },
