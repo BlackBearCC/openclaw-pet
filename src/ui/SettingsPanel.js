@@ -6,7 +6,7 @@
 // AI Provider 预设（与 llm-service.js 保持一致）
 const PROVIDER_PRESETS = {
   openai:   { label: 'OpenAI',        baseUrl: 'https://api.openai.com/v1',                           defaultModel: 'gpt-4o' },
-  bailian:  { label: '百炼 (Bailian)', baseUrl: 'https://coding.dashscope.aliyuncs.com/v1',             defaultModel: 'kimi-k2.5' },
+  bailian:  { label: '百炼 (Bailian)', baseUrl: 'https://coding.dashscope.aliyuncs.com/v1',             defaultModel: 'glm-5' },
   doubao:   { label: '豆包 (Doubao)',  baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',            defaultModel: 'doubao-1-5-pro-32k-250115' },
   deepseek: { label: 'DeepSeek',      baseUrl: 'https://api.deepseek.com/v1',                         defaultModel: 'deepseek-chat' },
   moonshot: { label: 'Moonshot',      baseUrl: 'https://api.moonshot.cn/v1',                          defaultModel: 'moonshot-v1-8k' },

@@ -87,7 +87,7 @@ function _loadOrCreateDeviceIdentity() {
 // ===== AI Provider 预设 =====
 const AI_PROVIDERS = {
   openai:     { label: 'OpenAI',        baseUrl: 'https://api.openai.com/v1',                       defaultModel: 'gpt-4o',                       api: 'openai-completions' },
-  bailian:    { label: '百炼 (Bailian)', baseUrl: 'https://coding.dashscope.aliyuncs.com/v1',           defaultModel: 'kimi-k2.5',                    api: 'openai-completions' },
+  bailian:    { label: '百炼 (Bailian)', baseUrl: 'https://coding.dashscope.aliyuncs.com/v1',           defaultModel: 'glm-5',                        api: 'openai-completions' },
   doubao:     { label: '豆包 (Doubao)',  baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',        defaultModel: 'doubao-1-5-pro-32k-250115',    api: 'openai-completions' },
   deepseek:   { label: 'DeepSeek',      baseUrl: 'https://api.deepseek.com/v1',                     defaultModel: 'deepseek-chat',                api: 'openai-completions' },
   moonshot:   { label: 'Moonshot',      baseUrl: 'https://api.moonshot.cn/v1',                      defaultModel: 'moonshot-v1-8k',               api: 'openai-completions' },
@@ -660,6 +660,15 @@ class LLMService {
       }
     } catch (e) {
       console.warn('[llm] Failed to load config:', e.message);
+    }
+
+    // 始终尝试从 openclaw.json 读取 gateway token
+    if (!this.config.gatewayToken) {
+      const ocConfig = this._readOpenClawConfig();
+      if (ocConfig?.gateway?.auth?.token) {
+        this.config.gatewayToken = ocConfig.gateway.auth.token;
+        console.log('[llm] Auto-populated gateway token from openclaw config');
+      }
     }
 
     // 如果 pet 配置里没有 AI 设置，尝试从 ~/.openclaw/openclaw.json 自动填充
