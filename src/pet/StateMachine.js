@@ -25,7 +25,7 @@ export class StateMachine {
   }
 
   _buildTransitions() {
-    const fromIdle = ['walk', 'sit', 'sleep', 'work', 'drag', 'click_react', 'talk', 'happy', 'sad', 'idle_ear_twitch', 'idle_yawn', 'idle_sneeze', 'idle_trip', 'idle_butterfly', 'eat', 'edge_idle'];
+    const fromIdle = ['walk', 'sit', 'sleep', 'swing', 'work', 'drag', 'click_react', 'talk', 'happy', 'sad', 'idle_ear_twitch', 'idle_yawn', 'idle_sneeze', 'idle_trip', 'idle_butterfly', 'eat', 'edge_idle'];
     const interruptible = ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad'];
     return {
       idle:        fromIdle,
@@ -37,6 +37,7 @@ export class StateMachine {
       walk:        ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad', 'eat', 'edge_idle', 'work'],
       sit:         ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad', 'eat', 'edge_idle', 'work'],
       sleep:       ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad', 'eat', 'edge_idle', 'work'],
+      swing:       ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad', 'eat', 'edge_idle'],
       work:        ['idle', 'drag', 'click_react', 'talk', 'happy', 'sad', 'eat', 'edge_idle'],
       drag:        ['idle', 'edge_idle'],
       click_react: ['idle', 'walk', 'sit', 'sleep', 'edge_idle', 'work'],
@@ -103,7 +104,7 @@ export class StateMachine {
    */
   _getReturnState() {
     // 临时状态结束后返回 idle
-    const tempStates = ['click_react', 'happy', 'sad', 'talk', 'drag', 'idle_ear_twitch', 'idle_yawn', 'idle_sneeze', 'idle_trip', 'idle_butterfly', 'eat', 'edge_idle', 'work'];
+    const tempStates = ['click_react', 'happy', 'sad', 'talk', 'drag', 'idle_ear_twitch', 'idle_yawn', 'idle_sneeze', 'idle_trip', 'idle_butterfly', 'eat', 'edge_idle', 'work', 'swing'];
     if (tempStates.includes(this.previousState)) {
       return 'idle';
     }

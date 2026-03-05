@@ -175,12 +175,16 @@ export class Behaviors {
 
     const roll = Math.random();
 
-    if (roll < 0.4) {
+    if (roll < 0.35) {
       this._startWalk();
-    } else if (roll < 0.6) {
+    } else if (roll < 0.55) {
       this.sm.transition('sit', { duration: 5000 + Math.random() * 5000 });
+    } else if (roll < 0.7) {
+      // 荡秋千：随机 20~60s，enter→loop→exit 复合动画
+      const duration = 20000 + Math.random() * 40000;
+      this.sm.transition('swing', { duration });
     }
-    // 40% 保持当前待机（什么都不做）
+    // 30% 保持当前待机（什么都不做）
   }
 
   /**

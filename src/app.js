@@ -50,6 +50,9 @@ class OpenClawPet {
     this.workEnterSheet = new SpriteSheet();
     this.workLoopSheet = new SpriteSheet();
     this.workExitSheet = new SpriteSheet();
+    this.swingEnterSheet = new SpriteSheet();
+    this.swingLoopSheet = new SpriteSheet();
+    this.swingExitSheet = new SpriteSheet();
     this.clickReactSheet = new SpriteSheet();
     this.dragSheet = new SpriteSheet();
     this.happySheet = new SpriteSheet();
@@ -114,6 +117,12 @@ class OpenClawPet {
           .catch(() => console.warn('⚠️ work_loop spritesheet not found')),
         this.workExitSheet.load(spritePath + 'work_exit.png', spritePath + 'work_exit.json')
           .catch(() => console.warn('⚠️ work_exit spritesheet not found')),
+        this.swingEnterSheet.load(spritePath + 'swing_enter.png', spritePath + 'swing_enter.json')
+          .catch(() => console.warn('⚠️ swing_enter spritesheet not found')),
+        this.swingLoopSheet.load(spritePath + 'swing_loop.png', spritePath + 'swing_loop.json')
+          .catch(() => console.warn('⚠️ swing_loop spritesheet not found')),
+        this.swingExitSheet.load(spritePath + 'swing_exit.png', spritePath + 'swing_exit.json')
+          .catch(() => console.warn('⚠️ swing_exit spritesheet not found')),
         this.clickReactSheet.load(spritePath + 'click_react.png', spritePath + 'click_react.json')
           .catch(() => console.warn('⚠️ click_react spritesheet not found')),
         this.dragSheet.load(spritePath + 'drag.png', spritePath + 'drag.json')
@@ -154,6 +163,9 @@ class OpenClawPet {
     this.renderer.registerSheet('work_enter', this.workEnterSheet);
     this.renderer.registerSheet('work_loop', this.workLoopSheet);
     this.renderer.registerSheet('work_exit', this.workExitSheet);
+    this.renderer.registerSheet('swing_enter', this.swingEnterSheet);
+    this.renderer.registerSheet('swing_loop', this.swingLoopSheet);
+    this.renderer.registerSheet('swing_exit', this.swingExitSheet);
     this.renderer.registerSheet('click_react', this.clickReactSheet);
     this.renderer.registerSheet('drag', this.dragSheet);
     this.renderer.registerSheet('happy', this.happySheet);
@@ -165,6 +177,7 @@ class OpenClawPet {
     this.renderer.registerSheet('idle', this.idleSheet);
     this.renderer.registerCompound('sleep', 'sleep_enter', 'sleep_loop', 'sleep_exit');
     this.renderer.registerCompound('work', 'work_enter', 'work_loop', 'work_exit');
+    this.renderer.registerCompound('swing', 'swing_enter', 'swing_loop', 'swing_exit');
 
     // 3b. 喂食动画
     this.feedingAnimator = new FeedingAnimator(this.renderer, this.stateMachine);
