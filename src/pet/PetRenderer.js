@@ -347,15 +347,15 @@ export class PetRenderer {
     ];
     const stageFilter = stageFilters[this._growthStage] || null;
 
-    if (stageFilter) {
-      this.ctx.filter = stageFilter;
-    }
-
     // 呼吸效果：以底部为锚点，垂直轻微缩放
     const breathPhase = (this._totalTime % this._breathPeriod) / this._breathPeriod;
     const breathScale = 1 + this._breathAmount * Math.sin(breathPhase * Math.PI * 2);
 
     this.ctx.save();
+    // filter 在 save 之后设置，restore 时自动归位，无需手动重置
+    if (stageFilter) {
+      this.ctx.filter = stageFilter;
+    }
     this.ctx.translate(w / 2, h);          // 锚点移到底部中心
 
     // 幼猫缩小 0.85x，以底部为锚点
@@ -376,8 +376,7 @@ export class PetRenderer {
       this.flipX
     );
 
-    this.ctx.restore();
-    this.ctx.filter = 'none'; // 重置滤镜
+    this.ctx.restore(); // 同时还原 filter、transform 等所有状态
 
     // overlay 绘制（叠加在猫咪之上）
     if (this.overlayDrawFn) {

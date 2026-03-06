@@ -610,7 +610,7 @@ class OpenClawPet {
 
     // 全局 mousemove：根据鼠标位置决定是否穿透
     // 面板区域 → 不穿透；canvas 非透明像素 → 不穿透；其他 → 穿透
-    document.addEventListener('mousemove', (e) => {
+    this._mouseMoveHandler = (e) => {
       // 1. 鼠标在打开的面板上 → 不穿透
       const chatPanel = document.getElementById('chat-panel');
       const settingsPanel = document.getElementById('settings-panel');
@@ -656,7 +656,8 @@ class OpenClawPet {
 
       // 3. 其他区域（透明背景）→ 穿透
       this.electronAPI.setIgnoreMouse(true);
-    });
+    };
+    document.addEventListener('mousemove', this._mouseMoveHandler);
   }
 
   _setupMainProcessEvents() {
@@ -871,7 +872,7 @@ class OpenClawPet {
       this.electronAPI.writeSkillFile(skillName, skillMd),
       this.electronAPI.appendAgentSession(eventText),
       this.electronAPI.appendAgentMemory(eventText),
-    ]);
+    ]).catch((e) => console.warn('[epiphany] 写入失败:', e.message));
 
     // 存入技能图鉴
     this.skillSystem.addRealized({ skillName, skillTitle, skillDesc, skillContent, summary, domainName, realizedAt: Date.now() });
@@ -971,6 +972,10 @@ class OpenClawPet {
   destroy() {
     this._running = false;
     if (this._proactiveTimer) clearInterval(this._proactiveTimer);
+    if (this._mouseMoveHandler) {
+      document.removeEventListener('mousemove', this._mouseMoveHandler);
+      this._mouseMoveHandler = null;
+    }
     this.renderer?.destroy();
     this.behaviors?.destroy();
     this.stateMachine?.destroy();

@@ -74,6 +74,9 @@ export class StreamingBubble {
     const rest = this.pendingText.trim();
     if (rest) {
       this._enqueueSegment(rest);
+    } else {
+      // 无剩余文本时，_showSegment 不会被调用，须手动移除 thinking dots
+      this._removeThinkingDots();
     }
     this.pendingText = '';
     this._removeCurrentEl();
