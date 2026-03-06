@@ -6,13 +6,29 @@
  * 依赖 PetAI 的 electronAPI.petAIComplete 通道。
  */
 
+const DEFAULT_PERSONA = '你是一只可爱的桌面宠物猫';
+
 export class CourseGenerator {
   constructor(electronAPI) {
     this.electronAPI = electronAPI;
     this._busy = false;
+    this._persona = null;
   }
 
   get isBusy() { return this._busy; }
+
+  async _getPersona() {
+    if (this._persona) return this._persona;
+    try {
+      const cfg = await this.electronAPI.getConfig?.();
+      this._persona = cfg?.systemPrompt?.trim() || DEFAULT_PERSONA;
+    } catch {
+      this._persona = DEFAULT_PERSONA;
+    }
+    return this._persona;
+  }
+
+  resetPersona() { this._persona = null; }
 
   /**
    * 根据该技能类别的近期活动生成一门课程
@@ -26,13 +42,14 @@ export class CourseGenerator {
 
     this._busy = true;
     try {
+      const persona = await this._getPersona();
       const toolHint = recentTools.length
         ? `最近使用过的相关工具：${recentTools.slice(0, 10).join('、')}。`
         : '暂无近期工具使用记录，请根据该领域常见技能生成一门基础课程。';
 
-      const prompt = `你是一只桌面宠物猫的学习顾问。主人最近在「${categoryName}」领域有一些活动。
+      const prompt = `${persona}的学习顾问。主人最近在「${categoryName}」领域有一些活动。
 ${toolHint}
-请设计一门适合猫咪学习的课程。课程标题应该来源于实际的工作活动（如果有的话），贴近真实使用场景。
+请设计一门适合宠物学习的课程。课程标题应该来源于实际的工作活动（如果有的话），贴近真实使用场景。
 
 请返回严格的 JSON（不要有代码块标记，不要有其他内容）：
 {"title":"课程名称，3到8字，如：编写单元测试","description":"课程简介，20到40字","complexity":数字1到5表示需要几节课学完,"skillContent":"学完后作为技能的具体指导内容，100到200字"}`;

@@ -1512,6 +1512,71 @@ html, body {
 }
 
 /* =============================================
+   Learning Choice UI — 学习问答选择面板
+   ============================================= */
+
+.learning-choice-ui {
+  position: absolute;
+  bottom: 100px;
+  left: 10px;
+  right: 10px;
+  background: var(--paper-warm);
+  border: var(--border-ink);
+  border-radius: var(--radius-sketchy-sm);
+  box-shadow: var(--shadow-ink);
+  padding: 8px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  opacity: 0;
+  transform: translateY(8px) scale(0.95);
+  transition: opacity 0.28s cubic-bezier(0.34, 1.2, 0.64, 1),
+              transform 0.28s cubic-bezier(0.34, 1.2, 0.64, 1);
+  z-index: 25;
+  pointer-events: auto;
+}
+.learning-choice-ui.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.lcu-question {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: center;
+  padding: 2px 0;
+}
+.lcu-choices {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+.lcu-btn {
+  flex: 1;
+  max-width: 80px;
+  padding: 5px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-sketchy-sm);
+  box-shadow: var(--shadow-ink-sm);
+  cursor: pointer;
+  transition: background var(--transition), transform 0.15s ease;
+  user-select: none;
+}
+.lcu-btn:hover {
+  background: var(--clr-primary-light);
+  transform: translateY(-1px);
+}
+.lcu-btn:active {
+  transform: translateY(1px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+/* =============================================
    Bottom Chat — 浮动图标 + 紧凑输入
    ============================================= */
 

@@ -41,6 +41,8 @@ import { PetAI } from './pet/PetAI.js';
 import { LearningSystem } from './pet/LearningSystem.js';
 import { CourseGenerator } from './pet/CourseGenerator.js';
 import { LearningStatusBar } from './ui/LearningStatusBar.js';
+import { LearningEventScheduler } from './pet/LearningEventScheduler.js';
+import { LearningChoiceUI } from './ui/LearningChoiceUI.js';
 
 class OpenClawPet {
   constructor() {
@@ -340,8 +342,22 @@ class OpenClawPet {
       (courseId) => this._startLearning(courseId)
     );
 
+    // 6h6. 学习互动事件
+    this.learningChoiceUI = new LearningChoiceUI(petArea);
+    this.learningEventScheduler = new LearningEventScheduler({
+      petAI: this.petAI,
+      bubble: this.bubble,
+      markdownPanel: this.markdownPanel,
+      stateMachine: this.stateMachine,
+      moodSystem: this.moodSystem,
+      intimacySystem: this.intimacySystem,
+      electronAPI: this.electronAPI,
+      choiceUI: this.learningChoiceUI,
+    });
+
     // 学习回调
     this.learningSystem.onLessonComplete((result) => {
+      this.learningEventScheduler?.stop();
       this.behaviors.start();
       this.learningStatusBar.hide();
       this.stateMachine.transition('happy', { force: true, duration: 3000 });
@@ -388,6 +404,7 @@ class OpenClawPet {
     });
 
     this.learningSystem.onLessonInterrupt(({ courseTitle, reason, categoryName }) => {
+      this.learningEventScheduler?.stop();
       this.behaviors.start();
       this.learningStatusBar.hide();
       this.stateMachine.transition('sad', { force: true, duration: 2000 });
@@ -648,6 +665,7 @@ class OpenClawPet {
       const miniCatEl = e.target.closest?.('.mini-cat');
       const bottomChatEl = e.target.closest?.('.bottom-chat-input.open') || e.target.closest?.('.bottom-chat-toggle');
       const mdPanelEl = e.target.closest?.('.md-panel');
+      const choiceUIEl = e.target.closest?.('.learning-choice-ui');
       const contextMenuEl = e.target.closest?.('.custom-context-menu');
       // 右键菜单展开中 → 全局禁止穿透，确保点击任何区域都能关闭菜单
       if (document.querySelector('.custom-context-menu')) {
@@ -658,6 +676,7 @@ class OpenClawPet {
         !!miniCatEl ||
         !!bottomChatEl ||
         !!mdPanelEl ||
+        !!choiceUIEl ||
         !!contextMenuEl ||
         (chatPanel?.classList.contains('open') && chatPanel.contains(e.target)) ||
         (settingsPanel?.classList.contains('open') && settingsPanel.contains(e.target)) ||
@@ -933,8 +952,16 @@ class OpenClawPet {
       result.lesson.duration
     );
 
-    // 写入 OpenClaw 记忆
+    // 启动学习互动事件调度
     const { courseTitle, categoryName } = result.lesson;
+    this.learningEventScheduler?.start({
+      courseTitle,
+      categoryName,
+      duration: result.lesson.duration,
+      getElapsed: () => this.learningSystem.getActiveLesson()?.elapsed || 0,
+    });
+
+    // 写入 OpenClaw 记忆
     const startEvent = `[event:learning-start] 宠物开始学习「${courseTitle}」（${categoryName}领域）`;
     Promise.all([
       this.electronAPI?.appendAgentSession?.(startEvent),
@@ -1041,6 +1068,8 @@ class OpenClawPet {
     this.fileDropHandler?.destroy();
     this.toolStatusBar?.destroy();
     this.learningStatusBar?.destroy();
+    this.learningEventScheduler?.destroy();
+    this.learningChoiceUI?.destroy();
     this.miniCatSystem?.destroy();
     this.skillPanel?.destroy();
     this.agentConnections?.destroy();
