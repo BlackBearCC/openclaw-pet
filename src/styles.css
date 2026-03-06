@@ -1443,6 +1443,75 @@ html, body {
 }
 
 /* =============================================
+   Learning Status Bar — 底部学习进度横幅
+   ============================================= */
+
+.learning-status-bar {
+  position: absolute;
+  bottom: 44px;
+  left: 10px;
+  right: 10px;
+  background: var(--paper);
+  border: var(--border-ink);
+  border-radius: var(--radius-sketchy-sm);
+  box-shadow: var(--shadow-ink);
+  padding: 5px 8px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.34, 1.2, 0.64, 1);
+  z-index: 24;
+}
+.learning-status-bar.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.lsb-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.lsb-icon {
+  font-size: 12px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.lsb-title {
+  flex: 1;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lsb-time {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--clr-green);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.lsb-track {
+  height: 5px;
+  background: var(--ink-faint);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid var(--ink-light);
+}
+.lsb-fill {
+  height: 100%;
+  background: var(--clr-primary);
+  border-radius: 3px;
+  transition: width 1s linear;
+  min-width: 4px;
+}
+
+/* =============================================
    Bottom Chat — 浮动图标 + 紧凑输入
    ============================================= */
 

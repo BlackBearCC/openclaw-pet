@@ -40,6 +40,7 @@ import { SkillSystem } from './pet/SkillSystem.js';
 import { PetAI } from './pet/PetAI.js';
 import { LearningSystem } from './pet/LearningSystem.js';
 import { CourseGenerator } from './pet/CourseGenerator.js';
+import { LearningStatusBar } from './ui/LearningStatusBar.js';
 
 class OpenClawPet {
   constructor() {
@@ -278,6 +279,9 @@ class OpenClawPet {
     // 6f. 头顶状态条
     this.toolStatusBar = new ToolStatusBar(document.getElementById('pet-area'));
 
+    // 6f2. 底部学习进度横幅
+    this.learningStatusBar = new LearningStatusBar(document.getElementById('pet-area'));
+
     // 6g. 小分身系统
     this.miniCatSystem = new MiniCatSystem(
       document.getElementById('pet-area'),
@@ -340,6 +344,7 @@ class OpenClawPet {
     this.learningSystem.onLessonComplete((result) => {
       this.behaviors.unlock();
       this.toolStatusBar.hideLearning();
+      this.learningStatusBar.hide();
       this.stateMachine.transition('happy', { force: true, duration: 3000 });
       // 课程完成 → 领域活动（权重 3，高于普通对话的 1）
       this.skillSystem.recordDomainActivity(result.categoryName, result.courseTitle, 3);
@@ -367,6 +372,7 @@ class OpenClawPet {
     this.learningSystem.onLessonInterrupt(({ courseTitle, reason }) => {
       this.behaviors.unlock();
       this.toolStatusBar.hideLearning();
+      this.learningStatusBar.hide();
       this.stateMachine.transition('sad', { force: true, duration: 2000 });
       this.bubble.show(`学习中断了...${reason} 😿`, 4000);
     });
@@ -386,6 +392,11 @@ class OpenClawPet {
       this.behaviors.lock();
       this.toolStatusBar.showLearning(lesson.courseTitle, () =>
         this.learningSystem.getActiveLesson()?.remaining || 0
+      );
+      this.learningStatusBar.show(
+        lesson.courseTitle,
+        () => this.learningSystem.getActiveLesson()?.remaining || 0,
+        lesson.duration
       );
       this.bubble.show('继续上次的学习~ 📚', 3000);
     }
@@ -910,6 +921,13 @@ class OpenClawPet {
       this.learningSystem.getActiveLesson()?.remaining || 0
     );
 
+    // 底部学习进度横幅
+    this.learningStatusBar.show(
+      result.lesson.courseTitle,
+      () => this.learningSystem.getActiveLesson()?.remaining || 0,
+      result.lesson.duration
+    );
+
     this.bubble.show(`开始学习「${result.lesson.courseTitle}」了~ 📚`, 3000);
   }
 
@@ -997,6 +1015,7 @@ class OpenClawPet {
     this.contextMenu?.destroy();
     this.fileDropHandler?.destroy();
     this.toolStatusBar?.destroy();
+    this.learningStatusBar?.destroy();
     this.miniCatSystem?.destroy();
     this.skillPanel?.destroy();
     this.agentConnections?.destroy();
