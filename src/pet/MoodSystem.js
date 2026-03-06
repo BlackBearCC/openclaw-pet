@@ -20,6 +20,7 @@ export class MoodSystem {
     this._decayMultiplier = 1;
     this._callbacks = [];
     this._prevLevel = this.getLevel();
+    this._lastSavedMood = null; // 上次持久化的值，用于跳过无变化写入
 
     this._save();
     console.log(`[mood] Restored: ${Math.round(this.mood)} (${this.getLevel()}), offline decay: ${elapsedMin.toFixed(1)} min`);
@@ -88,7 +89,13 @@ export class MoodSystem {
   }
 
   _save() {
-    localStorage.setItem('pet-mood', String(Math.round(this.mood)));
+    const rounded = String(Math.round(this.mood));
+    // pet-mood-time 必须每次都更新，用于下次启动计算离线衰减的起点
+    // pet-mood 值若未变化则跳过写入，减少无效存储操作
+    if (rounded !== this._lastSavedMood) {
+      this._lastSavedMood = rounded;
+      localStorage.setItem('pet-mood', rounded);
+    }
     localStorage.setItem('pet-mood-time', String(Date.now()));
   }
 }

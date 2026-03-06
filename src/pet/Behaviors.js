@@ -57,8 +57,9 @@ export class Behaviors {
     // 窗口停靠
     this.isDocking = false;
 
-    // 绑定状态变化监听
-    this.sm.on('stateChange', (e) => this._onStateChange(e));
+    // 绑定状态变化监听（保存引用以便 destroy 时移除）
+    this._onStateChangeBound = (e) => this._onStateChange(e);
+    this.sm.on('stateChange', this._onStateChangeBound);
   }
 
   /**
@@ -179,7 +180,7 @@ export class Behaviors {
       this._startWalk();
     } else if (roll < 0.45) {
       this.sm.transition('sit', { duration: 5000 + Math.random() * 5000 });
-    } else if (roll < 0.75) {
+    } else if (roll < 0.55) {
       // 荡秋千：随机 20~60s，enter→loop→exit 复合动画
       const duration = 20000 + Math.random() * 40000;
       this.sm.transition('swing', { duration });
@@ -289,5 +290,6 @@ export class Behaviors {
    */
   destroy() {
     this.stop();
+    this.sm.off('stateChange', this._onStateChangeBound);
   }
 }

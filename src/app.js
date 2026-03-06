@@ -102,7 +102,6 @@ class OpenClawPet {
     this._chatCompletionCount = 0;
     this._running = false;
     this._proactiveTimer = null;
-    this._pendingClipboard = null; // 待处理的剪贴板内容
     this._lastAppReaction = 0;    // 窗口感知冷却
     this._dockingEnabled = false;  // 窗口停靠状态
   }
@@ -619,7 +618,7 @@ class OpenClawPet {
 
     // 全局 mousemove：根据鼠标位置决定是否穿透
     // 面板区域 → 不穿透；canvas 非透明像素 → 不穿透；其他 → 穿透
-    document.addEventListener('mousemove', (e) => {
+    this._mouseMoveHandler = (e) => {
       // 1. 鼠标在打开的面板上 → 不穿透
       const chatPanel = document.getElementById('chat-panel');
       const settingsPanel = document.getElementById('settings-panel');
@@ -665,7 +664,8 @@ class OpenClawPet {
 
       // 3. 其他区域（透明背景）→ 穿透
       this.electronAPI.setIgnoreMouse(true);
-    });
+    };
+    document.addEventListener('mousemove', this._mouseMoveHandler);
   }
 
   _setupMainProcessEvents() {
@@ -852,7 +852,6 @@ class OpenClawPet {
       };
       const hint = hints[data.type];
       if (!hint) return;
-      this._pendingClipboard = data.text;
       this.bubble.show(hint, 6000);
       this.stateMachine.transition('idle_ear_twitch', { force: true, duration: 2000 }); // 侧耳倾听
     });
@@ -882,7 +881,7 @@ class OpenClawPet {
       this.electronAPI.writeSkillFile(skillName, skillMd),
       this.electronAPI.appendAgentSession(eventText),
       this.electronAPI.appendAgentMemory(eventText),
-    ]);
+    ]).catch((e) => console.warn('[epiphany] 写入失败:', e.message));
 
     // 存入技能图鉴
     this.skillSystem.addRealized({ skillName, skillTitle, skillDesc, skillContent, summary, domainName, realizedAt: Date.now() });
@@ -954,6 +953,8 @@ class OpenClawPet {
   /** 根据窗口在屏幕的位置更新图标侧和宠物朝向 */
   async _updateSideByPosition() {
     if (!this.electronAPI?.getWindowPosition || !this.electronAPI?.getScreenSize) return;
+    if (this._updatingSide) return; // 防止上一次 IPC 未完成时重叠调用
+    this._updatingSide = true;
     try {
       const pos = await this.electronAPI.getWindowPosition();
       const scr = await this.electronAPI.getScreenSize();
@@ -966,7 +967,9 @@ class OpenClawPet {
       if (this.stateMachine.getState() !== 'walk') {
         this.renderer?.setFlipX(isOnRight);
       }
-    } catch {}
+    } catch {} finally {
+      this._updatingSide = false;
+    }
   }
 
   _showFallback() {
@@ -982,6 +985,10 @@ class OpenClawPet {
   destroy() {
     this._running = false;
     if (this._proactiveTimer) clearInterval(this._proactiveTimer);
+    if (this._mouseMoveHandler) {
+      document.removeEventListener('mousemove', this._mouseMoveHandler);
+      this._mouseMoveHandler = null;
+    }
     this.renderer?.destroy();
     this.behaviors?.destroy();
     this.stateMachine?.destroy();
