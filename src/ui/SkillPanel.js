@@ -9,7 +9,7 @@
  */
 
 // 技能分类：把工具归入更高层的技能
-const SKILL_CATEGORIES = [
+export const SKILL_CATEGORIES = [
   { name: '信息检索',  icon: '🔍', keys: ['web_search', 'fetch', 'browser', 'websearch'] },
   { name: '代码编写',  icon: '💻', keys: ['read', 'write', 'edit', 'read_file', 'write_file'] },
   { name: '代码搜索',  icon: '🔎', keys: ['grep', 'glob', 'search'] },
@@ -25,6 +25,9 @@ export class SkillPanel {
     this.unlockSystem = unlockSystem;
     this.agentStatsTracker = agentStatsTracker;
     this.achievementSystem = achievementSystem;
+    this.learningSystem = null;
+    this.courseGenerator = null;
+    this._onStartLesson = null; // callback: (courseId) => void
     this.isOpen = false;
     this._tools = [];
     this._activeTab = 'tools';
@@ -44,6 +47,7 @@ export class SkillPanel {
         <button class="almanac-tab" data-tab="skills">\uD83C\uDFAF \u6280\u80FD</button>
         <button class="almanac-tab" data-tab="agents">\uD83D\uDC31 \u5206\u8EAB</button>
         <button class="almanac-tab" data-tab="achievements">\uD83C\uDFC6 \u6210\u5C31</button>
+        <button class="almanac-tab" data-tab="learning">\uD83D\uDCDA \u5B66\u4E60</button>
       </div>
       <div class="skill-body">
         <div class="skill-loading">\u52A0\u8F7D\u4E2D...</div>
@@ -97,6 +101,8 @@ export class SkillPanel {
       await this._renderAgentsTab(body);
     } else if (this._activeTab === 'achievements') {
       this._renderAchievementsTab(body);
+    } else if (this._activeTab === 'learning') {
+      this._renderLearningTab(body);
     }
   }
 
@@ -296,6 +302,170 @@ export class SkillPanel {
       <div class="skill-count">\u5171 ${all.length} \u4E2A\u6210\u5C31\uFF08\u5DF2\u89E3\u9501 ${unlocked.length}\uFF09</div>
       <div class="achievement-list">${cards}</div>
     `;
+  }
+
+  // ===== 学习系统注入 =====
+
+  setLearning(learningSystem, courseGenerator, onStartLesson) {
+    this.learningSystem = learningSystem;
+    this.courseGenerator = courseGenerator;
+    this._onStartLesson = onStartLesson;
+  }
+
+  async openToLearning() {
+    this.isOpen = true;
+    this.element.classList.add('open');
+    await this._switchTab('learning');
+  }
+
+  // ===== 学习图鉴 =====
+  _renderLearningTab(body) {
+    if (!this.learningSystem) {
+      body.innerHTML = '<div class="skill-empty">学习系统未初始化</div>';
+      return;
+    }
+
+    const ls = this.learningSystem;
+    const activeLesson = ls.getActiveLesson();
+
+    // 1. 正在学习中 → 显示进度
+    let activeHtml = '';
+    if (activeLesson) {
+      const pct = Math.round(activeLesson.progress * 100);
+      const remainMin = Math.ceil(activeLesson.remaining / 60000);
+      activeHtml = `
+        <div class="learn-active-card">
+          <div class="learn-active-title">\uD83D\uDCDA 正在学习：${this._escapeHtml(activeLesson.courseTitle)}</div>
+          <div class="learn-progress-bar">
+            <div class="learn-progress-fill" style="width:${pct}%"></div>
+          </div>
+          <div class="learn-active-info">进度 ${pct}% · 剩余 ${remainMin} 分钟</div>
+          <button class="learn-abort-btn">\u23F9 中断学习</button>
+        </div>
+      `;
+    }
+
+    // 2. 类别等级概览
+    const levelCards = SKILL_CATEGORIES.map(cat => {
+      const p = ls.getProgress(cat.name);
+      const xpInLevel = p.xp - (p.level > 1 ? [0, 30, 80, 150, 250, 380, 550, 770, 1050, 1400][p.level - 1] || 0 : 0);
+      const xpForNext = (p.nextXp === Infinity) ? 0 : (p.nextXp - ([0, 30, 80, 150, 250, 380, 550, 770, 1050, 1400][p.level - 1] || 0));
+      const pct = xpForNext > 0 ? Math.round((xpInLevel / xpForNext) * 100) : 100;
+      return `
+        <div class="learn-level-card">
+          <span class="learn-cat-icon">${cat.icon}</span>
+          <span class="learn-cat-name">${cat.name}</span>
+          <span class="learn-cat-level">Lv.${p.level}</span>
+          <div class="learn-xp-bar"><div class="learn-xp-fill" style="width:${pct}%"></div></div>
+        </div>
+      `;
+    }).join('');
+
+    // 3. 可用课程列表
+    const courses = ls.getCourses();
+    let coursesHtml = '';
+    if (courses.length === 0) {
+      coursesHtml = '<div class="skill-empty">暂无可学习的课程，点击下方按钮生成</div>';
+    } else {
+      coursesHtml = courses.map(c => {
+        const stars = '\u2B50'.repeat(c.complexity);
+        const frag = `${c.fragments || 0}/${c.totalFragments}`;
+        const daysLeft = Math.ceil((c.expiresAt - Date.now()) / 86400000);
+        const canStart = !activeLesson;
+        return `
+          <div class="learn-course-card ${canStart ? '' : 'learn-disabled'}">
+            <div class="learn-course-header">
+              <span class="learn-course-title">${this._escapeHtml(c.title)}</span>
+              <span class="learn-course-cat">${this._escapeHtml(c.categoryName)}</span>
+            </div>
+            <div class="learn-course-desc">${this._escapeHtml(c.description || '')}</div>
+            <div class="learn-course-meta">
+              <span title="复杂度">${stars}</span>
+              <span title="碎片进度">\uD83E\uDDE9 ${frag}</span>
+              <span title="过期时间">\u23F3 ${daysLeft}天</span>
+            </div>
+            ${canStart ? `<button class="learn-start-btn" data-course-id="${c.id}">\u25B6 开始学习</button>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 4. 生成课程按钮
+    const genBusy = this.courseGenerator?.isBusy;
+    const genBtnHtml = `
+      <div class="learn-gen-section">
+        <select class="learn-gen-select">
+          ${SKILL_CATEGORIES.map(c => `<option value="${c.name}">${c.icon} ${c.name}</option>`).join('')}
+        </select>
+        <button class="learn-gen-btn" ${genBusy ? 'disabled' : ''}>${genBusy ? '生成中...' : '\u2728 生成新课程'}</button>
+      </div>
+    `;
+
+    // 5. 学习历史
+    const history = ls.getHistory();
+    let historyHtml = '';
+    if (history.length > 0) {
+      const recentHistory = history.slice(-5).reverse();
+      historyHtml = `
+        <div class="skill-section-title">\uD83C\uDF93 已毕业课程</div>
+        <div class="learn-history-list">
+          ${recentHistory.map(c => {
+            const date = new Date(c.completedAt).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+            return `<div class="learn-history-item"><span>${this._escapeHtml(c.title)}</span><span class="learn-history-date">${date}</span></div>`;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    body.innerHTML = `
+      ${activeHtml}
+      <div class="skill-section-title">\uD83C\uDFAF 学习等级</div>
+      <div class="learn-level-grid">${levelCards}</div>
+      <div class="skill-section-title">\uD83D\uDCDA 可学习课程</div>
+      ${coursesHtml}
+      ${genBtnHtml}
+      ${historyHtml}
+    `;
+
+    // 事件绑定
+    if (activeLesson) {
+      body.querySelector('.learn-abort-btn')?.addEventListener('click', () => {
+        this.learningSystem.abortLesson();
+        this._loadAndRender();
+      });
+    }
+
+    body.querySelectorAll('.learn-start-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const courseId = btn.dataset.courseId;
+        if (this._onStartLesson) this._onStartLesson(courseId);
+        this.close();
+      });
+    });
+
+    body.querySelector('.learn-gen-btn')?.addEventListener('click', async () => {
+      const select = body.querySelector('.learn-gen-select');
+      const catName = select.value;
+      const btn = body.querySelector('.learn-gen-btn');
+      btn.disabled = true;
+      btn.textContent = '生成中...';
+
+      // 收集近期该类别的工具
+      const unlockData = this.unlockSystem?.getData() || {};
+      const cat = SKILL_CATEGORIES.find(c => c.name === catName);
+      const recentTools = cat ? Object.keys(unlockData).filter(name =>
+        cat.keys.some(k => name.toLowerCase().includes(k))
+      ).slice(0, 10) : [];
+
+      const result = await this.courseGenerator?.generate(catName, recentTools);
+      if (result) {
+        this.learningSystem.addCourse(result);
+        await this._loadAndRender();
+      } else {
+        btn.textContent = '生成失败，请重试';
+        btn.disabled = false;
+      }
+    });
   }
 
   // ===== 渲染辅助 =====

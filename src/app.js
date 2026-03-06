@@ -36,6 +36,8 @@ import { BottomChatInput } from './ui/BottomChatInput.js';
 import { MarkdownPanel } from './ui/MarkdownPanel.js';
 import { HungerSystem } from './pet/HungerSystem.js';
 import { HealthSystem } from './pet/HealthSystem.js';
+import { LearningSystem } from './pet/LearningSystem.js';
+import { CourseGenerator } from './pet/CourseGenerator.js';
 
 class OpenClawPet {
   constructor() {
@@ -90,6 +92,8 @@ class OpenClawPet {
     this.streamingBubble = null;
     this.markdownPanel = null;
     this.bottomChatInput = null;
+    this.learningSystem = null;
+    this.courseGenerator = null;
 
     this._lastTime = 0;
     this._chatCompletionCount = 0;
@@ -314,6 +318,69 @@ class OpenClawPet {
       this.agentStatsTracker, this.achievementSystem
     );
 
+    // 6h5. 学习系统
+    this.learningSystem = new LearningSystem(this.hungerSystem, this.moodSystem);
+    this.courseGenerator = new CourseGenerator(this.electronAPI);
+
+    // 注入到 SkillPanel
+    this.skillPanel.setLearning(
+      this.learningSystem,
+      this.courseGenerator,
+      (courseId) => this._startLearning(courseId)
+    );
+
+    // 学习回调
+    this.learningSystem.onLessonComplete((result) => {
+      this.behaviors.unlock();
+      this.toolStatusBar.hideLearning();
+      this.stateMachine.transition('happy', { force: true, duration: 3000 });
+      this.intimacySystem.gain(3);
+
+      const fragMsg = result.gotFragment
+        ? `获得了技能碎片！(${result.fragmentProgress})`
+        : `没有获得碎片...继续加油！(${result.fragmentProgress})`;
+      this.bubble.show(`学完了！经验 +${result.xpGained} ${fragMsg}`, 5000);
+    });
+
+    this.learningSystem.onCourseComplete((course) => {
+      this.intimacySystem.gain(15);
+      this.bubble.show(`恭喜！「${course.title}」毕业了！🎓`, 6000);
+      this.stateMachine.transition('happy', { force: true, duration: 4000 });
+
+      // 生成 SKILL.md（如果 PetAI 可用）
+      if (this.electronAPI?.writeSkillFile && course.skillContent) {
+        const skillName = `learned-${course.title.replace(/\s+/g, '-')}`;
+        const skillMd = `# ${course.title}\n\n${course.description || ''}\n\n${course.skillContent}`;
+        this.electronAPI.writeSkillFile(skillName, skillMd).catch(() => {});
+      }
+    });
+
+    this.learningSystem.onLessonInterrupt(({ courseTitle, reason }) => {
+      this.behaviors.unlock();
+      this.toolStatusBar.hideLearning();
+      this.stateMachine.transition('sad', { force: true, duration: 2000 });
+      this.bubble.show(`学习中断了...${reason} 😿`, 4000);
+    });
+
+    this.learningSystem.onLevelUp(({ categoryName, level }) => {
+      this.bubble.show(`${categoryName} 升到 Lv.${level} 了！📈`, 4000);
+    });
+
+    // 离线续算
+    const offlineCheck = this.learningSystem.checkOfflineLesson();
+    if (offlineCheck.resumed && offlineCheck.completed) {
+      // 离线已完成，回调已触发
+    } else if (offlineCheck.resumed && !offlineCheck.completed) {
+      // 恢复学习中
+      const lesson = offlineCheck.lesson;
+      this.stateMachine.transition('work', { force: true });
+      this.behaviors.lock();
+      this.toolStatusBar.showLearning(lesson.courseTitle, () =>
+        this.learningSystem.getActiveLesson()?.remaining || 0
+      );
+      this.bubble.show('继续上次的学习~ 📚', 3000);
+    }
+
     // 6i. 多 Agent 协作可视化
     this.agentConnections = new AgentConnections(
       document.getElementById('pet-area'),
@@ -388,6 +455,7 @@ class OpenClawPet {
         { icon: '📖', label: '图鉴',       action: () => { this.chatPanel.isOpen && this.chatPanel.closeQuiet(); this.settingsPanel.isOpen && this.settingsPanel.closeQuiet(); this.skillPanel.toggle(); } },
         { type: 'separator' },
         { icon: '🍤', label: '喂零食',     action: () => { if (!this.feedingAnimator.isPlaying) { this.behaviors.recordInteraction(); this.feedingAnimator.play(() => { this.moodSystem.gain(20); this.hungerSystem.feedSnack(); this.intimacySystem.gain(10); this.bubble.show(['好吃！~ 😋','喵呜~ 谢谢主人！','啊好香！还有吗！'][Math.floor(Math.random()*3)], 3000); }); } } },
+        { icon: '📚', label: '去学习',     action: () => { this.chatPanel.isOpen && this.chatPanel.closeQuiet(); this.settingsPanel.isOpen && this.settingsPanel.closeQuiet(); this.skillPanel.openToLearning(); } },
         { type: 'separator' },
         { icon: '📌', label: '置顶',       action: () => api.toggleAlwaysOnTop?.() },
         { type: 'separator' },
@@ -763,6 +831,25 @@ class OpenClawPet {
     });
   }
 
+  _startLearning(courseId) {
+    const result = this.learningSystem.startLesson(courseId);
+    if (!result.ok) {
+      this.bubble.show(result.reason, 3000);
+      return;
+    }
+    // 进入工作动画 + 锁定行为
+    this.stateMachine.transition('work', { force: true });
+    this.behaviors.lock();
+    this.behaviors.recordInteraction();
+
+    // 头顶显示倒计时
+    this.toolStatusBar.showLearning(result.lesson.courseTitle, () =>
+      this.learningSystem.getActiveLesson()?.remaining || 0
+    );
+
+    this.bubble.show(`开始学习「${result.lesson.courseTitle}」了~ 📚`, 3000);
+  }
+
   _disableDocking() {
     this._dockingEnabled = false;
     this.behaviors.setDocking(false);
@@ -786,6 +873,7 @@ class OpenClawPet {
       this.moodSystem.update(deltaMs);
       this.hungerSystem.update(deltaMs);
       this.healthSystem.update(deltaMs, this.hungerSystem.getLevel(), this.moodSystem.getLevel());
+      this.learningSystem?.update(deltaMs);
 
       // 每 ~30 帧更新一次图标/朝向（避免每帧查询）
       if (++iconUpdateCounter >= 30) {
@@ -845,6 +933,8 @@ class OpenClawPet {
     this.skillUnlockSystem = null;
     this.agentStatsTracker = null;
     this.achievementSystem = null;
+    this.learningSystem = null;
+    this.courseGenerator = null;
     this.bottomChatInput?.destroy();
     this.streamingBubble?.destroy();
     this.markdownPanel?.destroy();

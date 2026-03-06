@@ -18,6 +18,7 @@ export class HungerSystem {
 
     this._decayAcc = 0;
     this._saveAcc = 0;
+    this._decayMultiplier = 1;
     this._callbacks = [];
     this._prevLevel = this.getLevel();
 
@@ -50,7 +51,7 @@ export class HungerSystem {
     // 每 10 秒衰减一次，每分钟 -0.6
     if (this._decayAcc >= 10000) {
       const before = this.getLevel();
-      this.hunger = Math.max(0, this.hunger - (this._decayAcc / 60000) * 0.6);
+      this.hunger = Math.max(0, this.hunger - (this._decayAcc / 60000) * 0.6 * this._decayMultiplier);
       this._decayAcc = 0;
       const after = this.getLevel();
       if (before !== after) this._emitChange(after);
@@ -76,6 +77,8 @@ export class HungerSystem {
   }
 
   getHunger() { return Math.round(this.hunger); }
+
+  setDecayMultiplier(n) { this._decayMultiplier = n; }
 
   /**
    * 注册饱腹等级变化回调
