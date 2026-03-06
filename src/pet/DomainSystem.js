@@ -52,29 +52,25 @@ export const DOMAIN_ATTR_WEIGHTS = {
   '情感': { logic: 0, creativity: 1, execution: 0, empathy: 2, sensitivity: 3 },
 };
 
-/** 根据名称查找领域，找不到返回 null */
-export function findDomain(name) {
-  return DOMAINS.find(d => d.name === name) || null;
-}
+// 推断函数使用的关键词模式（模块级常量，避免每次调用重新分配）
+const DOMAIN_PATTERNS = [
+  { name: '技术', keywords: ['代码', 'code', '编程', '调试', 'debug', 'bug', '函数', 'function', 'api', '接口', '系统', '报错', '运行', '部署', '框架', '数据库', 'sql', 'git'] },
+  { name: '创作', keywords: ['设计', 'design', '画', '插画', '排版', '字体', '配色', '海报', '艺术', '创作', '风格', '视觉', '美术', '图标', '动画'] },
+  { name: '办公', keywords: ['报告', '文档', 'ppt', '邮件', 'email', '会议', '方案', '需求', '产品文档', '提案', '总结', '周报', '计划', '任务'] },
+  { name: '探索', keywords: ['搜索', '查资料', '了解', '新闻', '发现', '研究', '资料', '学习', '知识', '教程', '文章', '看到', '最新'] },
+  { name: '生活', keywords: ['吃', '做饭', '饭', '菜', '运动', '睡', '健康', '身体', '锻炼', '购物', '家', '出门', '天气', '散步'] },
+  { name: '社交', keywords: ['朋友', '聊天', '八卦', '同事', '关系', '聚会', '约', '他说', '她说', '群里', '朋友圈', '分享', '社交'] },
+  { name: '情感', keywords: ['感觉', '心情', '难过', '开心', '焦虑', '压力', '累', '烦', '害怕', '担心', '喜欢', '讨厌', '情绪', '想', '希望', '失望'] },
+];
 
 /** 根据对话文本关键词推断最可能的领域名，推断不出返回 null */
 export function inferDomainFromText(text) {
   if (!text) return null;
   const t = text.toLowerCase();
 
-  const patterns = [
-    { name: '技术', keywords: ['代码', 'code', '编程', '调试', 'debug', 'bug', '函数', 'function', 'api', '接口', '系统', '报错', '运行', '部署', '框架', '数据库', 'sql', 'git'] },
-    { name: '创作', keywords: ['设计', 'design', '画', '插画', '排版', '字体', '配色', '海报', '艺术', '创作', '风格', '视觉', '美术', '图标', '动画'] },
-    { name: '办公', keywords: ['报告', '文档', 'ppt', '邮件', 'email', '会议', '方案', '需求', '产品文档', '提案', '总结', '周报', '计划', '任务'] },
-    { name: '探索', keywords: ['搜索', '查资料', '了解', '新闻', '发现', '研究', '资料', '学习', '知识', '教程', '文章', '看到', '最新'] },
-    { name: '生活', keywords: ['吃', '做饭', '饭', '菜', '运动', '睡', '健康', '身体', '锻炼', '购物', '家', '出门', '天气', '散步'] },
-    { name: '社交', keywords: ['朋友', '聊天', '八卦', '同事', '关系', '聚会', '约', '他说', '她说', '群里', '朋友圈', '分享', '社交'] },
-    { name: '情感', keywords: ['感觉', '心情', '难过', '开心', '焦虑', '压力', '累', '烦', '害怕', '担心', '喜欢', '讨厌', '情绪', '想', '希望', '失望'] },
-  ];
-
   let best = null;
   let bestScore = 0;
-  for (const p of patterns) {
+  for (const p of DOMAIN_PATTERNS) {
     const score = p.keywords.filter(k => t.includes(k)).length;
     if (score > bestScore) { bestScore = score; best = p.name; }
   }

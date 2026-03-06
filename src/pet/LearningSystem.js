@@ -12,8 +12,6 @@
  *   learn-history   → 已完成课程记录 (Course[])
  */
 
-import { DOMAINS } from './DomainSystem.js';
-
 const XP_PER_LESSON = 10;
 export const LEVEL_THRESHOLDS = [0, 30, 80, 150, 250, 380, 550, 770, 1050, 1400];
 const MAX_LEVEL = 10;

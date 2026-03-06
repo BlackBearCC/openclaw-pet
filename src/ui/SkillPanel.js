@@ -498,7 +498,7 @@ export class SkillPanel {
       btn.textContent = '生成中...';
 
       // 收集该领域的近期话题上下文（来自 SkillSystem 领域记录）
-      const domainData = this.skillSystem?._domains?.[catName];
+      const domainData = this.skillSystem?.getDomainData(catName);
       const recentContexts = domainData?.recentContexts || [];
 
       const result = await this.courseGenerator?.generate(catName, recentContexts);
