@@ -362,7 +362,15 @@ class OpenClawPet {
         : `没有获得碎片...继续加油！(${result.fragmentProgress})`;
       if (this.petAI && !this.petAI.isBusy) {
         this.petAI.generateLearningReaction('complete', result.courseTitle, result.categoryName).then(text => {
-          this.bubble.show(text || `学完了！经验 +${result.xpGained} ${fragMsg}`, 5000);
+          const bubbleText = text || `学完了！经验 +${result.xpGained} ${fragMsg}`;
+          this.bubble.show(bubbleText, 5000);
+          if (text) {
+            const reactionEvent = `[pet:reaction] ${text}`;
+            Promise.all([
+              this.electronAPI?.appendAgentSession?.(reactionEvent),
+              this.electronAPI?.appendAgentMemory?.(reactionEvent),
+            ]).catch(() => {});
+          }
         });
       } else {
         this.bubble.show(`学完了！经验 +${result.xpGained} ${fragMsg}`, 5000);
@@ -938,8 +946,15 @@ class OpenClawPet {
 
     if (this.petAI && !this.petAI.isBusy) {
       this.petAI.generateLearningReaction('start', courseTitle, categoryName).then(text => {
-        if (text) this.bubble.show(text, 4000);
-        else this.bubble.show(`开始学习「${courseTitle}」了~ 📚`, 3000);
+        const bubbleText = text || `开始学习「${courseTitle}」了~ 📚`;
+        this.bubble.show(bubbleText, 4000);
+        if (text) {
+          const reactionEvent = `[pet:reaction] ${text}`;
+          Promise.all([
+            this.electronAPI?.appendAgentSession?.(reactionEvent),
+            this.electronAPI?.appendAgentMemory?.(reactionEvent),
+          ]).catch(() => {});
+        }
       });
     } else {
       this.bubble.show(`开始学习「${courseTitle}」了~ 📚`, 3000);
