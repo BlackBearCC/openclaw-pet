@@ -12,10 +12,9 @@
  */
 
 const XP_PER_LESSON = 10;
-const LEVEL_THRESHOLDS = [0, 30, 80, 150, 250, 380, 550, 770, 1050, 1400];
+export const LEVEL_THRESHOLDS = [0, 30, 80, 150, 250, 380, 550, 770, 1050, 1400];
 const MAX_LEVEL = 10;
 
-const LESSON_DURATION_BASE = 45 * 60 * 1000; // 45 分钟
 const LESSON_DURATION_MIN  = 30 * 60 * 1000;
 const LESSON_DURATION_MAX  = 60 * 60 * 1000;
 
@@ -136,7 +135,7 @@ export class LearningSystem {
 
   abortLesson() {
     if (!this._active) return;
-    this._interruptLesson();
+    this._interruptLesson('主动中断');
   }
 
   isLearning() { return !!this._active; }
@@ -175,7 +174,8 @@ export class LearningSystem {
     if (!this._active) return { resumed: false, completed: false };
 
     const now = Date.now();
-    const totalElapsed = this._active.elapsed + (now - this._active.startedAt);
+    // startedAt 是绝对时间戳，now - startedAt 就是总的真实经过时间
+    const totalElapsed = now - this._active.startedAt;
 
     if (totalElapsed >= this._active.duration) {
       // 离线期间已完成
@@ -184,9 +184,8 @@ export class LearningSystem {
       return { resumed: true, completed: true };
     }
 
-    // 恢复学习，更新 elapsed
+    // 恢复学习，以真实经过时间为准
     this._active.elapsed = totalElapsed;
-    this._active.startedAt = now;
     this._saveActive();
 
     // 恢复加速衰减
@@ -260,7 +259,7 @@ export class LearningSystem {
     }
   }
 
-  _interruptLesson() {
+  _interruptLesson(explicitReason) {
     const lesson = this._active;
     if (!lesson) return;
 
@@ -268,13 +267,11 @@ export class LearningSystem {
     this._hungerSystem.setDecayMultiplier(1);
     this._moodSystem.setDecayMultiplier(1);
 
-    // 保留 50% 进度
-    const course = this._courses.find(c => c.id === lesson.courseId);
-
     this._active = null;
     this._saveActive();
 
-    const reason = this._hungerSystem.getHunger() <= 0 ? '太饿了' : '心情太差了';
+    const reason = explicitReason
+      || (this._hungerSystem.getHunger() <= 0 ? '太饿了' : '心情太差了');
     for (const cb of this._onLessonInterrupt) cb({ courseTitle: lesson.courseTitle, reason });
   }
 

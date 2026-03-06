@@ -8,6 +8,8 @@
  * - 成就图鉴：12 个徽章成就
  */
 
+import { LEVEL_THRESHOLDS } from '../pet/LearningSystem.js';
+
 // 技能分类：把工具归入更高层的技能
 export const SKILL_CATEGORIES = [
   { name: '信息检索',  icon: '🔍', keys: ['web_search', 'fetch', 'browser', 'websearch'] },
@@ -348,8 +350,9 @@ export class SkillPanel {
     // 2. 类别等级概览
     const levelCards = SKILL_CATEGORIES.map(cat => {
       const p = ls.getProgress(cat.name);
-      const xpInLevel = p.xp - (p.level > 1 ? [0, 30, 80, 150, 250, 380, 550, 770, 1050, 1400][p.level - 1] || 0 : 0);
-      const xpForNext = (p.nextXp === Infinity) ? 0 : (p.nextXp - ([0, 30, 80, 150, 250, 380, 550, 770, 1050, 1400][p.level - 1] || 0));
+      const currentThreshold = LEVEL_THRESHOLDS[p.level - 1] || 0;
+      const xpInLevel = p.xp - currentThreshold;
+      const xpForNext = (p.nextXp === Infinity) ? 0 : (p.nextXp - currentThreshold);
       const pct = xpForNext > 0 ? Math.round((xpInLevel / xpForNext) * 100) : 100;
       return `
         <div class="learn-level-card">
