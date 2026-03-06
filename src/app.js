@@ -343,7 +343,6 @@ class OpenClawPet {
     // 学习回调
     this.learningSystem.onLessonComplete((result) => {
       this.behaviors.start();
-      this.toolStatusBar.hideLearning();
       this.learningStatusBar.hide();
       this.stateMachine.transition('happy', { force: true, duration: 3000 });
       // 课程完成 → 领域活动（权重 3，高于普通对话的 1）
@@ -371,7 +370,6 @@ class OpenClawPet {
 
     this.learningSystem.onLessonInterrupt(({ courseTitle, reason }) => {
       this.behaviors.start();
-      this.toolStatusBar.hideLearning();
       this.learningStatusBar.hide();
       this.stateMachine.transition('sad', { force: true, duration: 2000 });
       this.bubble.show(`学习中断了...${reason} 😿`, 4000);
@@ -901,11 +899,6 @@ class OpenClawPet {
     this.stateMachine.transition('work', { force: true });
     this.behaviors.stop();
     this.behaviors.recordInteraction();
-
-    // 头顶显示倒计时
-    this.toolStatusBar.showLearning(result.lesson.courseTitle, () =>
-      this.learningSystem.getActiveLesson()?.remaining || 0
-    );
 
     // 底部学习进度横幅
     this.learningStatusBar.show(
