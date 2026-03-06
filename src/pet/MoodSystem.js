@@ -90,9 +90,12 @@ export class MoodSystem {
 
   _save() {
     const rounded = String(Math.round(this.mood));
-    if (rounded === this._lastSavedMood) return;
-    this._lastSavedMood = rounded;
-    localStorage.setItem('pet-mood', rounded);
+    // pet-mood-time 必须每次都更新，用于下次启动计算离线衰减的起点
+    // pet-mood 值若未变化则跳过写入，减少无效存储操作
+    if (rounded !== this._lastSavedMood) {
+      this._lastSavedMood = rounded;
+      localStorage.setItem('pet-mood', rounded);
+    }
     localStorage.setItem('pet-mood-time', String(Date.now()));
   }
 }
