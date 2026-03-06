@@ -22,6 +22,8 @@ export class ToolStatusBar {
   constructor(petArea) {
     this._visible = false;
     this._timer = null;
+    this._learningMode = false;
+    this._learningInterval = null;
     this._createDOM(petArea);
   }
 
@@ -37,6 +39,7 @@ export class ToolStatusBar {
    * @param {string} [icon] — 可选，强制指定图标
    */
   show(toolName, icon) {
+    if (this._learningMode) return; // 学习中不被工具状态覆盖
     const resolvedIcon = icon || this._matchIcon(toolName) || '🔧';
     const safeName = this._escapeHtml(this._truncate(toolName, 10));
 
@@ -51,6 +54,44 @@ export class ToolStatusBar {
     // 安全超时：最多显示 30 秒
     clearTimeout(this._timer);
     this._timer = setTimeout(() => this.hide(), 30000);
+  }
+
+  /**
+   * 显示学习模式（带倒计时，不超时自动隐藏）
+   * @param {string} title — 课程名称
+   * @param {() => number} getRemainingMs — 返回剩余毫秒数的函数
+   */
+  showLearning(title, getRemainingMs) {
+    this._learningMode = true;
+    clearTimeout(this._timer);
+    clearInterval(this._learningInterval);
+
+    const safeTitle = this._escapeHtml(this._truncate(title, 8));
+
+    const updateCountdown = () => {
+      const ms = getRemainingMs();
+      if (ms <= 0) { this.hideLearning(); return; }
+      const min = Math.floor(ms / 60000);
+      const sec = Math.floor((ms % 60000) / 1000);
+      const timeStr = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+      this.element.innerHTML = `
+        <span class="tool-icon">\uD83D\uDCDA</span>
+        <span class="tool-name">${safeTitle}</span>
+        <span class="tool-countdown">${timeStr}</span>
+      `;
+    };
+
+    updateCountdown();
+    this._learningInterval = setInterval(updateCountdown, 1000);
+    this.element.classList.add('visible');
+    this._visible = true;
+  }
+
+  hideLearning() {
+    this._learningMode = false;
+    clearInterval(this._learningInterval);
+    this._learningInterval = null;
+    this.hide();
   }
 
   hide() {
@@ -79,6 +120,7 @@ export class ToolStatusBar {
 
   destroy() {
     clearTimeout(this._timer);
+    clearInterval(this._learningInterval);
     this.element?.remove();
   }
 }

@@ -17,6 +17,7 @@ export class MoodSystem {
 
     this._decayAcc = 0;
     this._saveAcc = 0;
+    this._decayMultiplier = 1;
     this._callbacks = [];
     this._prevLevel = this.getLevel();
 
@@ -45,7 +46,7 @@ export class MoodSystem {
     // 每 10 秒衰减一次，每分钟 -0.4
     if (this._decayAcc >= 10000) {
       const before = this.getLevel();
-      this.mood = Math.max(15, this.mood - (this._decayAcc / 60000) * 0.4);
+      this.mood = Math.max(15, this.mood - (this._decayAcc / 60000) * 0.4 * this._decayMultiplier);
       this._decayAcc = 0;
       const after = this.getLevel();
       if (before !== after) this._emitChange(after);
@@ -71,6 +72,8 @@ export class MoodSystem {
   }
 
   getMood() { return Math.round(this.mood); }
+
+  setDecayMultiplier(n) { this._decayMultiplier = n; }
 
   /**
    * 注册心情等级变化回调
