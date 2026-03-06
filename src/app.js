@@ -356,24 +356,21 @@ class OpenClawPet {
         this.electronAPI?.appendAgentMemory?.(completeEvent),
       ]).catch(() => {});
 
-      // PetAI 生成完成反应气泡
+      // 立即显示结果气泡，PetAI 返回后再补一条反应
       const fragMsg = result.gotFragment
         ? `获得了技能碎片！(${result.fragmentProgress})`
         : `没有获得碎片...继续加油！(${result.fragmentProgress})`;
+      this.bubble.show(`学完了！经验 +${result.xpGained} ${fragMsg}`, 5000);
       if (this.petAI && !this.petAI.isBusy) {
         this.petAI.generateLearningReaction('complete', result.courseTitle, result.categoryName).then(text => {
-          const bubbleText = text || `学完了！经验 +${result.xpGained} ${fragMsg}`;
-          this.bubble.show(bubbleText, 5000);
-          if (text) {
-            const reactionEvent = `[pet:reaction] ${text}`;
-            Promise.all([
-              this.electronAPI?.appendAgentSession?.(reactionEvent),
-              this.electronAPI?.appendAgentMemory?.(reactionEvent),
-            ]).catch(() => {});
-          }
+          if (!text) return;
+          setTimeout(() => this.bubble.show(text, 5000), 5200);
+          const reactionEvent = `[pet:reaction] ${text}`;
+          Promise.all([
+            this.electronAPI?.appendAgentSession?.(reactionEvent),
+            this.electronAPI?.appendAgentMemory?.(reactionEvent),
+          ]).catch(() => {});
         });
-      } else {
-        this.bubble.show(`学完了！经验 +${result.xpGained} ${fragMsg}`, 5000);
       }
     });
 
@@ -936,7 +933,7 @@ class OpenClawPet {
       result.lesson.duration
     );
 
-    // 写入 OpenClaw 记忆 + PetAI 生成反应气泡
+    // 写入 OpenClaw 记忆
     const { courseTitle, categoryName } = result.lesson;
     const startEvent = `[event:learning-start] 宠物开始学习「${courseTitle}」（${categoryName}领域）`;
     Promise.all([
@@ -944,20 +941,18 @@ class OpenClawPet {
       this.electronAPI?.appendAgentMemory?.(startEvent),
     ]).catch(() => {});
 
+    // 立即显示占位气泡，PetAI 返回后再补一条反应
+    this.bubble.show(`开始学习「${courseTitle}」了~ 📚`, 3000);
     if (this.petAI && !this.petAI.isBusy) {
       this.petAI.generateLearningReaction('start', courseTitle, categoryName).then(text => {
-        const bubbleText = text || `开始学习「${courseTitle}」了~ 📚`;
-        this.bubble.show(bubbleText, 4000);
-        if (text) {
-          const reactionEvent = `[pet:reaction] ${text}`;
-          Promise.all([
-            this.electronAPI?.appendAgentSession?.(reactionEvent),
-            this.electronAPI?.appendAgentMemory?.(reactionEvent),
-          ]).catch(() => {});
-        }
+        if (!text) return;
+        setTimeout(() => this.bubble.show(text, 5000), 3200);
+        const reactionEvent = `[pet:reaction] ${text}`;
+        Promise.all([
+          this.electronAPI?.appendAgentSession?.(reactionEvent),
+          this.electronAPI?.appendAgentMemory?.(reactionEvent),
+        ]).catch(() => {});
       });
-    } else {
-      this.bubble.show(`开始学习「${courseTitle}」了~ 📚`, 3000);
     }
   }
 

@@ -221,8 +221,9 @@ function createWindow() {
         body: JSON.stringify({
           model: cfg.aiModel,
           messages: [{ role: 'user', content: prompt }],
-          max_tokens: 512,
+          max_tokens: 100,
           temperature: 0.85,
+          stream: false,
         }),
       });
       if (!res.ok) { console.warn('[pet-ai] LLM error:', res.status); return null; }
