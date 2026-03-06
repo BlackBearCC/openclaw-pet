@@ -25,7 +25,8 @@ import { IntimacySystem } from './pet/IntimacySystem.js';
 import { FileDropHandler } from './interaction/FileDropHandler.js';
 import { ToolStatusBar } from './ui/ToolStatusBar.js';
 import { MiniCatSystem } from './pet/MiniCatSystem.js';
-import { SkillPanel, SKILL_CATEGORIES } from './ui/SkillPanel.js';
+import { SkillPanel } from './ui/SkillPanel.js';
+import { inferDomainFromText } from './pet/DomainSystem.js';
 import { WorkspaceWatcher } from './pet/WorkspaceWatcher.js';
 import { AgentConnections } from './ui/AgentConnections.js';
 import { AgentStatsTracker } from './pet/AgentStatsTracker.js';
@@ -298,6 +299,12 @@ class OpenClawPet {
       this.achievementSystem?.check();
     });
 
+    // 6h1. 宠物属性升级通知
+    this.skillSystem.onAttrLevelUp(({ name, level }) => {
+      this.bubble.show(`${name} 提升到 Lv.${level} 了！✨`, 4000);
+      this.stateMachine.transition('happy', { force: true, duration: 2000 });
+    });
+
     // 6h2. Agent 战绩追踪
     this.agentStatsTracker = new AgentStatsTracker();
 
@@ -335,6 +342,8 @@ class OpenClawPet {
       this.behaviors.unlock();
       this.toolStatusBar.hideLearning();
       this.stateMachine.transition('happy', { force: true, duration: 3000 });
+      // 课程完成 → 领域活动（权重 3，高于普通对话的 1）
+      this.skillSystem.recordDomainActivity(result.categoryName, result.courseTitle, 3);
       this.intimacySystem.gain(3);
 
       const fragMsg = result.gotFragment
@@ -695,7 +704,7 @@ class OpenClawPet {
       this.bubble.show('对话已清空~ 重新开始吧！', 2000);
     });
 
-    // AI 聊天回复完成 → 亲密度 +3 + 饱腹（按回复长度）+ 成就检查
+    // AI 聊天回复完成 → 亲密度 +3 + 饱腹 + 领域活动推断 + 成就检查
     this.electronAPI.onChatStream?.((payload) => {
       if (payload?.state === 'final') {
         this.intimacySystem.gain(3);
@@ -704,6 +713,10 @@ class OpenClawPet {
         this._chatCompletionCount++;
         localStorage.setItem('pet-chat-count', String(this._chatCompletionCount));
         this.achievementSystem?.check();
+
+        // 根据对话内容推断领域，驱动技能领域积累
+        const domain = inferDomainFromText(msg);
+        if (domain) this.skillSystem.recordDomainActivity(domain, msg.slice(0, 60));
       }
     });
 
@@ -789,14 +802,12 @@ class OpenClawPet {
       // 1. 分发给小分身系统
       this.miniCatSystem?.onAgentEvent(event);
 
-      // 2. 工具调用 → 头顶状态条 + 技能解锁 + Agent 战绩
+      // 2. 工具调用 → 头顶状态条 + 工具图鉴统计（不再驱动技能领域）
       if (event.stream === 'tool') {
         const toolName = event.data?.tool || event.data?.name || 'working';
         if (event.data?.phase === 'start' || event.data?.status === 'running') {
           this.toolStatusBar.show(toolName);
-          const lowerTool = toolName.toLowerCase();
-          const cat = SKILL_CATEGORIES.find(c => c.keys.some(k => lowerTool.includes(k)));
-          this.skillSystem.recordTool(toolName, cat?.name || null);
+          this.skillSystem.recordTool(toolName);
 
           // 子 session 工具追踪
           const isSubSession = event.sessionKey && !event.sessionKey.endsWith(':main');

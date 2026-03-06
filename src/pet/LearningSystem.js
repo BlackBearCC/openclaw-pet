@@ -3,13 +3,16 @@
  * 学习系统 — 用户主动安排角色学习技能课程
  *
  * 参考 QQ 宠物学习机制：选课 → 消耗饱腹/心情 → 倒计时 → 获得经验+技能碎片
+ * 课程按 7 个生活领域分类（来自 DomainSystem），完成后通知 SkillSystem 更新属性。
  *
  * localStorage keys:
  *   learn-courses   → 可用课程列表 (Course[])
- *   learn-progress  → { [categoryName]: { xp, level } }
+ *   learn-progress  → { [domainName]: { xp, level } }
  *   learn-active    → 当前学习会话 | null
  *   learn-history   → 已完成课程记录 (Course[])
  */
+
+import { DOMAINS } from './DomainSystem.js';
 
 const XP_PER_LESSON = 10;
 export const LEVEL_THRESHOLDS = [0, 30, 80, 150, 250, 380, 550, 770, 1050, 1400];
@@ -214,7 +217,7 @@ export class LearningSystem {
     this._hungerSystem.setDecayMultiplier(1);
     this._moodSystem.setDecayMultiplier(1);
 
-    // XP 增长
+    // XP 增长（按领域）
     const progress = this._progress[catName] || { xp: 0, level: 1 };
     const oldLevel = progress.level;
     progress.xp += XP_PER_LESSON;

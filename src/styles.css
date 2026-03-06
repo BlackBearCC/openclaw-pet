@@ -983,6 +983,15 @@ html, body {
 .book-domain-name { flex: 1; font-size: 11px; }
 .book-domain-stars { color: #f5a623; font-size: 10px; flex-shrink: 0; }
 
+/* 宠物属性面板 */
+.pet-attr-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
+.pet-attr-row { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--ink); }
+.pet-attr-icon { font-size: 12px; flex-shrink: 0; }
+.pet-attr-name { width: 36px; flex-shrink: 0; }
+.pet-attr-level { width: 28px; flex-shrink: 0; color: #888; font-size: 10px; }
+.pet-attr-bar { flex: 1; height: 5px; background: #e8e0d0; border-radius: 3px; overflow: hidden; }
+.pet-attr-fill { height: 100%; background: #8B7355; border-radius: 3px; transition: width 0.4s ease; }
+
 /* 分隔线 */
 .book-divider {
   text-align: center; color: var(--ink-light); font-size: 11px;

@@ -9,17 +9,7 @@
  */
 
 import { LEVEL_THRESHOLDS } from '../pet/LearningSystem.js';
-
-// 技能分类：把工具归入更高层的技能
-export const SKILL_CATEGORIES = [
-  { name: '信息检索',  icon: '🔍', keys: ['web_search', 'fetch', 'browser', 'websearch'] },
-  { name: '代码编写',  icon: '💻', keys: ['read', 'write', 'edit', 'read_file', 'write_file'] },
-  { name: '代码搜索',  icon: '🔎', keys: ['grep', 'glob', 'search'] },
-  { name: '系统操作',  icon: '⚡', keys: ['bash', 'exec', 'shell', 'terminal'] },
-  { name: '文档处理',  icon: '📄', keys: ['pdf', 'image', 'canvas'] },
-  { name: '社交通信',  icon: '💬', keys: ['discord', 'slack', 'telegram'] },
-  { name: '定时任务',  icon: '⏰', keys: ['cron', 'schedule'] },
-];
+import { DOMAINS } from '../pet/DomainSystem.js';
 
 export class SkillPanel {
   constructor(electronAPI, skillSystem = null, agentStatsTracker = null, achievementSystem = null) {
@@ -149,30 +139,40 @@ export class SkillPanel {
   _renderSkillsTab(body) {
     const realizedSkills = this.skillSystem?.getRealizedSkills() || [];
 
-    // 按分类统计领悟技能数量
+    // 按领域统计领悟技能数量
     const countByDomain = {};
     for (const s of realizedSkills) {
       countByDomain[s.domainName] = (countByDomain[s.domainName] || 0) + 1;
     }
 
-    const catCards = SKILL_CATEGORIES.map(cat => {
-      const count = countByDomain[cat.name] || 0;
+    // 领域卡片
+    const domainCards = DOMAINS.map(d => {
+      const count = countByDomain[d.name] || 0;
       const unlocked = count > 0;
       const stars = count >= 7 ? 3 : count >= 3 ? 2 : count >= 1 ? 1 : 0;
       const starStr = '★'.repeat(stars) + '☆'.repeat(3 - stars);
       return `
         <div class="book-domain-card ${unlocked ? '' : 'book-domain-locked'}">
-          <span class="book-domain-icon">${cat.icon}</span>
-          <span class="book-domain-name">${cat.name}</span>
+          <span class="book-domain-icon">${d.icon}</span>
+          <span class="book-domain-name">${d.name}</span>
           <span class="book-domain-stars">${unlocked ? starStr : '🔒'}</span>
         </div>
       `;
     }).join('');
 
-    const unlockedCount = SKILL_CATEGORIES.filter(cat => countByDomain[cat.name] > 0).length;
+    // 宠物属性面板
+    const attributes = this.skillSystem?.getAttributes() || [];
+    const attrHtml = attributes.map(a => `
+      <div class="pet-attr-row">
+        <span class="pet-attr-icon">${a.icon}</span>
+        <span class="pet-attr-name">${a.name}</span>
+        <span class="pet-attr-level">Lv.${a.level}</span>
+        <div class="pet-attr-bar"><div class="pet-attr-fill" style="width:${a.pct}%"></div></div>
+      </div>
+    `).join('');
 
     const realizedHtml = realizedSkills.length === 0
-      ? '<div class="book-empty-hint">还没有领悟任何技能，<br>多使用工具探索世界吧~ 🐾</div>'
+      ? '<div class="book-empty-hint">还没有领悟任何技能，<br>多和我聊聊你在做什么吧~ 🐾</div>'
       : realizedSkills.slice().reverse().map((s, i) => {
           const date = new Date(s.realizedAt).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
           return `
@@ -186,8 +186,13 @@ export class SkillPanel {
         }).join('');
 
     body.innerHTML = `
-      <div class="book-section-title">技能领域</div>
-      <div class="book-domain-grid">${catCards}</div>
+      ${attributes.length ? `
+        <div class="book-section-title">宠物属性</div>
+        <div class="pet-attr-list">${attrHtml}</div>
+        <div class="book-divider">✦ ✦ ✦</div>
+      ` : ''}
+      <div class="book-section-title">活跃领域</div>
+      <div class="book-domain-grid">${domainCards}</div>
       <div class="book-divider">✦ ✦ ✦</div>
       <div class="book-section-title">领悟卷轴 <span class="book-count">${realizedSkills.length} / ∞</span></div>
       ${realizedHtml}
@@ -386,17 +391,17 @@ export class SkillPanel {
       `;
     }
 
-    // 2. 类别等级概览
-    const levelCards = SKILL_CATEGORIES.map(cat => {
-      const p = ls.getProgress(cat.name);
+    // 2. 领域学习等级概览
+    const levelCards = DOMAINS.map(d => {
+      const p = ls.getProgress(d.name);
       const currentThreshold = LEVEL_THRESHOLDS[p.level - 1] || 0;
       const xpInLevel = p.xp - currentThreshold;
       const xpForNext = (p.nextXp === Infinity) ? 0 : (p.nextXp - currentThreshold);
       const pct = xpForNext > 0 ? Math.round((xpInLevel / xpForNext) * 100) : 100;
       return `
         <div class="learn-level-card">
-          <span class="learn-cat-icon">${cat.icon}</span>
-          <span class="learn-cat-name">${cat.name}</span>
+          <span class="learn-cat-icon">${d.icon}</span>
+          <span class="learn-cat-name">${d.name}</span>
           <span class="learn-cat-level">Lv.${p.level}</span>
           <div class="learn-xp-bar"><div class="learn-xp-fill" style="width:${pct}%"></div></div>
         </div>
@@ -437,7 +442,7 @@ export class SkillPanel {
     const genBtnHtml = `
       <div class="learn-gen-section">
         <select class="learn-gen-select">
-          ${SKILL_CATEGORIES.map(c => `<option value="${c.name}">${c.icon} ${c.name}</option>`).join('')}
+          ${DOMAINS.map(d => `<option value="${d.name}">${d.icon} ${d.name}</option>`).join('')}
         </select>
         <button class="learn-gen-btn" ${genBusy ? 'disabled' : ''}>${genBusy ? '生成中...' : '\u2728 生成新课程'}</button>
       </div>
@@ -492,14 +497,11 @@ export class SkillPanel {
       btn.disabled = true;
       btn.textContent = '生成中...';
 
-      // 收集近期该类别的工具
-      const unlockData = this.unlockSystem?.getData() || {};
-      const cat = SKILL_CATEGORIES.find(c => c.name === catName);
-      const recentTools = cat ? Object.keys(unlockData).filter(name =>
-        cat.keys.some(k => name.toLowerCase().includes(k))
-      ).slice(0, 10) : [];
+      // 收集该领域的近期话题上下文（来自 SkillSystem 领域记录）
+      const domainData = this.skillSystem?._domains?.[catName];
+      const recentContexts = domainData?.recentContexts || [];
 
-      const result = await this.courseGenerator?.generate(catName, recentTools);
+      const result = await this.courseGenerator?.generate(catName, recentContexts);
       if (result) {
         this.learningSystem.addCourse(result);
         await this._loadAndRender();
