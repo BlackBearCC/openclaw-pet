@@ -47,11 +47,9 @@ export class CourseGenerator {
         ? `最近使用过的相关工具：${recentTools.slice(0, 10).join('、')}。`
         : '暂无近期工具使用记录，请根据该领域常见技能生成一门基础课程。';
 
-      const prompt = `${persona}的学习顾问。主人最近在「${categoryName}」领域有一些活动。
-${toolHint}
-请设计一门适合宠物学习的课程。课程标题应该来源于实际的工作活动（如果有的话），贴近真实使用场景。
+      const prompt = `[角色]\n${persona}的学习顾问。\n\n[情景]\n主人最近在「${categoryName}」领域有一些活动。${toolHint}\n\n[任务]\n请设计一门适合角色学习的课程。课程标题应来源于实际的工作活动（如果有的话），贴近真实使用场景。
 
-请返回严格的 JSON（不要有代码块标记，不要有其他内容）：
+返回严格JSON（无代码块标记，无其他文字）：
 {"title":"课程名称，3到8字，如：编写单元测试","description":"课程简介，20到40字","complexity":数字1到5表示需要几节课学完,"skillContent":"学完后作为技能的具体指导内容，100到200字"}`;
 
       const text = await this.electronAPI.petAIComplete(prompt);
