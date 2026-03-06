@@ -179,7 +179,7 @@ export class Behaviors {
       this._startWalk();
     } else if (roll < 0.45) {
       this.sm.transition('sit', { duration: 5000 + Math.random() * 5000 });
-    } else if (roll < 0.75) {
+    } else if (roll < 0.55) {
       // 荡秋千：随机 20~60s，enter→loop→exit 复合动画
       const duration = 20000 + Math.random() * 40000;
       this.sm.transition('swing', { duration });
