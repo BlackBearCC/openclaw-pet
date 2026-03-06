@@ -381,24 +381,10 @@ class OpenClawPet {
       this.bubble.show(`${categoryName} 升到 Lv.${level} 了！📈`, 4000);
     });
 
-    // 离线续算
+    // 离线检查：学习必须在线完成，退出即中断
     const offlineCheck = this.learningSystem.checkOfflineLesson();
-    if (offlineCheck.resumed && offlineCheck.completed) {
-      // 离线已完成，回调已触发
-    } else if (offlineCheck.resumed && !offlineCheck.completed) {
-      // 恢复学习中
-      const lesson = offlineCheck.lesson;
-      this.stateMachine.transition('work', { force: true });
-      this.behaviors.stop();
-      this.toolStatusBar.showLearning(lesson.courseTitle, () =>
-        this.learningSystem.getActiveLesson()?.remaining || 0
-      );
-      this.learningStatusBar.show(
-        lesson.courseTitle,
-        () => this.learningSystem.getActiveLesson()?.remaining || 0,
-        lesson.duration
-      );
-      this.bubble.show('继续上次的学习~ 📚', 3000);
+    if (offlineCheck.resumed && offlineCheck.interrupted) {
+      this.bubble.show(`「${offlineCheck.lesson.courseTitle}」学习中断了，下次要坚持到底喵~ 😿`, 5000);
     }
 
     // 6i. 多 Agent 协作可视化

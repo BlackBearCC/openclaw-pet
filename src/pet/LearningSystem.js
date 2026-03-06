@@ -174,26 +174,14 @@ export class LearningSystem {
   checkOfflineLesson() {
     if (!this._active) return { resumed: false, completed: false };
 
-    const now = Date.now();
-    // startedAt 是绝对时间戳，now - startedAt 就是总的真实经过时间
-    const totalElapsed = now - this._active.startedAt;
-
-    if (totalElapsed >= this._active.duration) {
-      // 离线期间已完成
-      this._active.elapsed = this._active.duration;
-      this._completeLesson();
-      return { resumed: true, completed: true };
-    }
-
-    // 恢复学习，以真实经过时间为准
-    this._active.elapsed = totalElapsed;
+    // 学习必须在线完成，退出即中断，进度清零
+    const lesson = this._active;
+    this._active = null;
     this._saveActive();
+    this._hungerSystem.setDecayMultiplier(1);
+    this._moodSystem.setDecayMultiplier(1);
 
-    // 恢复加速衰减
-    this._hungerSystem.setDecayMultiplier(2);
-    this._moodSystem.setDecayMultiplier(1.5);
-
-    return { resumed: true, completed: false, lesson: this._active };
+    return { resumed: true, completed: false, interrupted: true, lesson };
   }
 
   // ===== 回调 =====
