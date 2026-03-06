@@ -342,7 +342,7 @@ class OpenClawPet {
 
     // 学习回调
     this.learningSystem.onLessonComplete((result) => {
-      this.behaviors.unlock();
+      this.behaviors.start();
       this.toolStatusBar.hideLearning();
       this.learningStatusBar.hide();
       this.stateMachine.transition('happy', { force: true, duration: 3000 });
@@ -370,7 +370,7 @@ class OpenClawPet {
     });
 
     this.learningSystem.onLessonInterrupt(({ courseTitle, reason }) => {
-      this.behaviors.unlock();
+      this.behaviors.start();
       this.toolStatusBar.hideLearning();
       this.learningStatusBar.hide();
       this.stateMachine.transition('sad', { force: true, duration: 2000 });
@@ -389,7 +389,7 @@ class OpenClawPet {
       // 恢复学习中
       const lesson = offlineCheck.lesson;
       this.stateMachine.transition('work', { force: true });
-      this.behaviors.lock();
+      this.behaviors.stop();
       this.toolStatusBar.showLearning(lesson.courseTitle, () =>
         this.learningSystem.getActiveLesson()?.remaining || 0
       );
@@ -913,7 +913,7 @@ class OpenClawPet {
     }
     // 进入工作动画 + 锁定行为
     this.stateMachine.transition('work', { force: true });
-    this.behaviors.lock();
+    this.behaviors.stop();
     this.behaviors.recordInteraction();
 
     // 头顶显示倒计时
