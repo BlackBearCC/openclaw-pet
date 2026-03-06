@@ -101,7 +101,6 @@ class OpenClawPet {
     this._chatCompletionCount = 0;
     this._running = false;
     this._proactiveTimer = null;
-    this._pendingClipboard = null; // 待处理的剪贴板内容
     this._lastAppReaction = 0;    // 窗口感知冷却
     this._dockingEnabled = false;  // 窗口停靠状态
   }
@@ -842,7 +841,6 @@ class OpenClawPet {
       };
       const hint = hints[data.type];
       if (!hint) return;
-      this._pendingClipboard = data.text;
       this.bubble.show(hint, 6000);
       this.stateMachine.transition('idle_ear_twitch', { force: true, duration: 2000 }); // 侧耳倾听
     });
@@ -944,6 +942,8 @@ class OpenClawPet {
   /** 根据窗口在屏幕的位置更新图标侧和宠物朝向 */
   async _updateSideByPosition() {
     if (!this.electronAPI?.getWindowPosition || !this.electronAPI?.getScreenSize) return;
+    if (this._updatingSide) return; // 防止上一次 IPC 未完成时重叠调用
+    this._updatingSide = true;
     try {
       const pos = await this.electronAPI.getWindowPosition();
       const scr = await this.electronAPI.getScreenSize();
@@ -956,7 +956,9 @@ class OpenClawPet {
       if (this.stateMachine.getState() !== 'walk') {
         this.renderer?.setFlipX(isOnRight);
       }
-    } catch {}
+    } catch {} finally {
+      this._updatingSide = false;
+    }
   }
 
   _showFallback() {

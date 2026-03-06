@@ -268,7 +268,10 @@ export class ChatPanel {
    */
   _replaceMessage(id, newText, renderMarkdown = false) {
     const el = document.getElementById(id);
-    if (!el) return;
+    if (!el) {
+      delete this._rawTextMap[id]; // 元素已不在 DOM，清理过期条目
+      return;
+    }
     this._rawTextMap[id] = newText;
 
     const contentEl = el.querySelector('.msg-content');
