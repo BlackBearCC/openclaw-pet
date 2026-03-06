@@ -20,6 +20,36 @@ export class PetAI {
    * @param {string[]} recentTopics  最近对话关键词样本
    * @returns {Promise<{bubble,skillName,skillTitle,skillDesc,skillContent,summary}|null>}
    */
+  /**
+   * 生成学习事件的宠物反应气泡
+   * @param {'start'|'complete'|'interrupt'} event
+   * @param {string} courseTitle
+   * @param {string} categoryName
+   * @returns {Promise<string|null>} 气泡文本，15字内
+   */
+  async generateLearningReaction(event, courseTitle, categoryName) {
+    if (this._busy) return null;
+    this._busy = true;
+    try {
+      const eventDesc = {
+        start:     `刚刚开始学习「${courseTitle}」（${categoryName}领域），心情有点紧张又期待`,
+        complete:  `刚刚完成了一节「${courseTitle}」的学习（${categoryName}领域），感觉学到了东西`,
+        interrupt: `学习「${courseTitle}」被迫中断了，有点遗憾`,
+      }[event] || '';
+
+      const prompt = `你是一只桌面宠物猫。${eventDesc}。
+用一句猫咪口吻的话表达此刻的心情，10字以内，自然口语，末尾可加一个emoji，不要引号，直接输出文字。`;
+
+      const text = await this.electronAPI.petAIComplete(prompt);
+      return text?.trim().slice(0, 30) || null;
+    } catch (e) {
+      console.warn('[PetAI] generateLearningReaction failed:', e.message);
+      return null;
+    } finally {
+      this._busy = false;
+    }
+  }
+
   async generateEpiphany(domainName, recentTopics = []) {
     if (this._busy) return null;
     this._busy = true;

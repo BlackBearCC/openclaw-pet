@@ -349,10 +349,24 @@ class OpenClawPet {
       this.skillSystem.recordDomainActivity(result.categoryName, result.courseTitle, 3);
       this.intimacySystem.gain(3);
 
+      // 写入 OpenClaw 记忆
+      const completeEvent = `[event:learning-complete] 宠物完成了「${result.courseTitle}」一节学习（${result.categoryName}领域），经验 +${result.xpGained}`;
+      Promise.all([
+        this.electronAPI?.appendAgentSession?.(completeEvent),
+        this.electronAPI?.appendAgentMemory?.(completeEvent),
+      ]).catch(() => {});
+
+      // PetAI 生成完成反应气泡
       const fragMsg = result.gotFragment
         ? `获得了技能碎片！(${result.fragmentProgress})`
         : `没有获得碎片...继续加油！(${result.fragmentProgress})`;
-      this.bubble.show(`学完了！经验 +${result.xpGained} ${fragMsg}`, 5000);
+      if (this.petAI && !this.petAI.isBusy) {
+        this.petAI.generateLearningReaction('complete', result.courseTitle, result.categoryName).then(text => {
+          this.bubble.show(text || `学完了！经验 +${result.xpGained} ${fragMsg}`, 5000);
+        });
+      } else {
+        this.bubble.show(`学完了！经验 +${result.xpGained} ${fragMsg}`, 5000);
+      }
     });
 
     this.learningSystem.onCourseComplete((course) => {
@@ -368,10 +382,17 @@ class OpenClawPet {
       }
     });
 
-    this.learningSystem.onLessonInterrupt(({ courseTitle, reason }) => {
+    this.learningSystem.onLessonInterrupt(({ courseTitle, reason, categoryName }) => {
       this.behaviors.start();
       this.learningStatusBar.hide();
       this.stateMachine.transition('sad', { force: true, duration: 2000 });
+
+      const interruptEvent = `[event:learning-interrupt] 宠物学习「${courseTitle}」被中断，原因：${reason}`;
+      Promise.all([
+        this.electronAPI?.appendAgentSession?.(interruptEvent),
+        this.electronAPI?.appendAgentMemory?.(interruptEvent),
+      ]).catch(() => {});
+
       this.bubble.show(`学习中断了...${reason} 😿`, 4000);
     });
 
@@ -907,7 +928,22 @@ class OpenClawPet {
       result.lesson.duration
     );
 
-    this.bubble.show(`开始学习「${result.lesson.courseTitle}」了~ 📚`, 3000);
+    // 写入 OpenClaw 记忆 + PetAI 生成反应气泡
+    const { courseTitle, categoryName } = result.lesson;
+    const startEvent = `[event:learning-start] 宠物开始学习「${courseTitle}」（${categoryName}领域）`;
+    Promise.all([
+      this.electronAPI?.appendAgentSession?.(startEvent),
+      this.electronAPI?.appendAgentMemory?.(startEvent),
+    ]).catch(() => {});
+
+    if (this.petAI && !this.petAI.isBusy) {
+      this.petAI.generateLearningReaction('start', courseTitle, categoryName).then(text => {
+        if (text) this.bubble.show(text, 4000);
+        else this.bubble.show(`开始学习「${courseTitle}」了~ 📚`, 3000);
+      });
+    } else {
+      this.bubble.show(`开始学习「${courseTitle}」了~ 📚`, 3000);
+    }
   }
 
   _disableDocking() {
