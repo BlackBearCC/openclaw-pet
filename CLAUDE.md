@@ -45,20 +45,38 @@ OpenClaw Pet is a frameless, transparent, always-on-top Electron desktop pet. Th
 
 ```
 src/app.js (OpenClawPet)
-├── pet/PetRenderer.js         Canvas 2D renderer; wraps SpriteSheet + StateMachine
-├── pet/StateMachine.js        Animation state transitions (idle/walk/sit/sleep/work/eat/…)
-├── pet/Behaviors.js           Autonomous behavior scheduler (random movement, idle actions)
-├── pet/MoodSystem.js          Mood level with time-based decay
-├── pet/IntimacySystem.js      Growth stages 0-3, persistent via localStorage
-├── pet/FeedingAnimator.js     4-phase feeding sequence
-├── ui/ChatPanel.js            Full chat UI with streaming support
-├── ui/StreamingBubble.js      Stacked speech bubbles (up to 8)
-├── ui/BottomChatInput.js      Quick-input bar below the pet
-├── ui/SettingsPanel.js        Config UI (model, personality, etc.)
-├── interaction/DragHandler.js Window drag via moveWindow IPC
-├── interaction/ClickHandler.js Single / double / long-press detection
+├── pet/PetRenderer.js            Canvas 2D renderer; wraps SpriteSheet + StateMachine
+├── pet/StateMachine.js           Animation state transitions (idle/walk/sit/sleep/work/eat/…)
+├── pet/Behaviors.js              Autonomous behavior scheduler (random movement, idle actions)
+├── pet/MoodSystem.js             Mood level with time-based decay
+├── pet/HungerSystem.js           Hunger with time-based decay
+├── pet/HealthSystem.js           Health driven by hunger + mood
+├── pet/IntimacySystem.js         Growth stages 0-3, persistent via localStorage
+├── pet/FeedingAnimator.js        4-phase feeding sequence
+├── pet/DomainSystem.js           7 life domains + 5 attributes + weight matrix (static defs)
+├── pet/SkillSystem.js            Domain activity tracking + epiphany trigger + attribute XP
+├── pet/PetAI.js                  Pet inner-voice LLM (persona-aware, structured prompts)
+├── pet/LearningSystem.js         Course timer, XP, fragments, online-only completion
+├── pet/CourseGenerator.js        LLM-generated courses (persona-aware)
+├── pet/LearningEventScheduler.js Learning session interactive events (murmur/quiz/story)
+├── pet/AchievementSystem.js      12 achievement badges
+├── pet/MiniCatSystem.js          Sub-agent mini-cat companions (≤4)
+├── pet/AgentStatsTracker.js      Sub-session tool stats
+├── pet/WorkspaceWatcher.js       Foreground window title parsing
+├── ui/ChatPanel.js               Full chat UI with streaming support
+├── ui/StreamingBubble.js         Stacked speech bubbles (up to 8)
+├── ui/BottomChatInput.js         Quick-input bar below the pet
+├── ui/MarkdownPanel.js           Markdown rendering panel (left side)
+├── ui/SkillPanel.js              4-tab almanac (tools/skills/agents/achievements)
+├── ui/ToolStatusBar.js           Tool execution status above pet
+├── ui/LearningStatusBar.js       Bottom learning progress bar
+├── ui/LearningChoiceUI.js        Interactive Q&A choice buttons during learning
+├── ui/SettingsPanel.js           Config UI (model, personality, etc.)
+├── ui/AgentConnections.js        SVG connection lines visualization
+├── interaction/DragHandler.js    Window drag via moveWindow IPC
+├── interaction/ClickHandler.js   Single / double / long-press detection
 ├── interaction/FileDropHandler.js File drop → AI analysis → bubble or chat
-└── interaction/ContextMenu.js Right-click menu
+└── interaction/ContextMenu.js    Right-click menu with stat bars
 ```
 
 ## Sprite System
@@ -78,6 +96,26 @@ Regenerate all sprites: `npm run generate-placeholder` (calls `scripts/generate-
 
 Persisted to `localStorage['pet-intimacy']` as `{points, stage}`.
 
+## PetAI & Prompt Engineering
+
+`PetAI.js` handles all pet-internal LLM calls (not through OpenClaw Gateway). Key conventions:
+
+- **Persona from config**: All prompts load persona via `_getPersona()` which reads `systemPrompt` from user settings. Default: `'你是一只可爱的桌面宠物猫'`. Never hardcode a specific character in prompts.
+- **Structured prompts**: Use `_buildPrompt(persona, context, task)` → `[角色] + [情景] + [任务]` three-section format.
+- **Role-neutral language**: Use "角色人设的口吻" not "猫咪口吻". Constraints (word limits, format) go in `[任务]` section.
+- **`resetPersona()`**: Call when settings change to clear cached persona.
+- **LLM config** (`electron/main.js` `pet-ai-complete`): `enable_thinking: false` (百炼 provider), `max_tokens: 1024`, `stream: false`.
+
+## Learning System
+
+- **Online-only**: Learning must complete while app is running. App exit = lesson interrupted, no XP.
+- **LearningEventScheduler**: During learning sessions (30-60 min), triggers interactive events every 2-3 min (first at 30-60s):
+  - Murmur (50%): 8-char bubble via PetAI
+  - Quiz (30%): Choice buttons → mood/intimacy rewards
+  - Story (20%): Fun fact via MarkdownPanel
+- **Event sync**: All learning events + PetAI reactions written to OpenClaw via `appendAgentSession` + `appendAgentMemory`.
+- **StateMachine note**: Transitioning from `work` to `talk`/`happy` returns to `idle` (not `work`). Must manually `transition('work', { force: true })` after temporary animations.
+
 ## Key Conventions
 
 - **No bundler**: Do not introduce webpack/vite. Keep renderer as plain ES module imports.
@@ -85,3 +123,4 @@ Persisted to `localStorage['pet-intimacy']` as `{points, stage}`.
 - **Canvas rendering**: Pet animation runs via `requestAnimationFrame` in `PetRenderer`. Do not manipulate the canvas outside this class.
 - **Streaming chat**: Use `electronAPI.chatSend()` + `onChatStream()` for new AI calls. `chatWithAI()` is legacy (one-shot, used only for quick bubble responses when chat panel is closed).
 - **Persistent state**: Use `localStorage` for renderer-side persistence (mood, intimacy, settings cache). No files written from renderer.
+- **Mouse passthrough**: Interactive UI elements must be added to the `isOverPanel` check in `_setupMousePassthrough()` to receive clicks.
